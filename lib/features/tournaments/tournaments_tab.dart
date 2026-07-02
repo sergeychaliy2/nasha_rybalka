@@ -338,7 +338,9 @@ class _TournamentDialogState extends State<_TournamentDialog> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
+        constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.of(context).size.height * 0.92),
         child: GamePanel(
           padding: const EdgeInsets.all(16),
           child: Column(

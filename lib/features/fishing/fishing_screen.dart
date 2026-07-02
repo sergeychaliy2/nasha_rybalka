@@ -1572,7 +1572,9 @@ class _FishingScreenState extends ConsumerState<FishingScreen>
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 580),
+          constraints: BoxConstraints(
+              maxWidth: 460,
+              maxHeight: MediaQuery.of(context).size.height * 0.94),
           child: HeaderPanel(
             header: r.won
                 ? 'Победа!'
@@ -2043,7 +2045,9 @@ class _FishingScreenState extends ConsumerState<FishingScreen>
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 600),
+          constraints: BoxConstraints(
+              maxWidth: 460,
+              maxHeight: MediaQuery.of(context).size.height * 0.94),
           child: HeaderPanel(
             header: 'О месте',
             child: Column(
