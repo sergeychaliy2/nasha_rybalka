@@ -170,11 +170,11 @@ class _AdminHomeState extends State<AdminHome> {
         builder: () => TuningEditor(overrides: overrides),
       ),
       _Section(
-        'Звук по умолчанию',
-        'Громкость и эффекты для новых игроков (можно переопределить)',
+        'Аудио игры',
+        'Заменить файлы музыки меню и звуковых эффектов',
         Icons.graphic_eq,
         const Color(0xFFD98AC9),
-        builder: () => AudioEditor(overrides: overrides),
+        builder: () => const AudioEditor(),
       ),
     ];
 

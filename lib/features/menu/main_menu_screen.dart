@@ -33,11 +33,15 @@ class _MainMenuScreenState extends State<MainMenuScreen>
     _ticker = createTicker(
         (e) => setState(() => _t = e.inMicroseconds / 1e6))
       ..start();
+    // Фоновая музыка меню (луп); заглушается при уходе в игру.
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => SoundService.startMenuMusic());
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    SoundService.stopMenuMusic();
     super.dispose();
   }
 
@@ -126,9 +130,12 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                     0,
                     _MenuItem(
                       label: 'НАЧАТЬ ИГРУ',
-                      onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const RussiaMapScreen())),
+                      onTap: () async {
+                        SoundService.stopMenuMusic(); // тишина на карте/воде
+                        await Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const RussiaMapScreen()));
+                        if (mounted) SoundService.startMenuMusic();
+                      },
                     ),
                   ),
                   const SizedBox(height: 26),
@@ -400,6 +407,8 @@ class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
   late bool _sound;
   late bool _vibration;
   late double _volume;
+  late bool _music;
+  late double _musicVolume;
 
   @override
   void initState() {
@@ -407,6 +416,8 @@ class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
     final prefs = ref.read(sharedPreferencesProvider);
     _sound = SoundService.enabled;
     _volume = SoundService.volume;
+    _music = SoundService.musicEnabled;
+    _musicVolume = SoundService.musicVolume;
     _vibration = prefs.getBool('settings.vibration') ?? true;
   }
 
@@ -431,6 +442,15 @@ class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
                 _volumeRow(prefs),
                 const SizedBox(height: 10),
                 _sfxSection(prefs),
+              ],
+              const SizedBox(height: 10),
+              _toggleRow('Музыка в меню', _music, (v) {
+                setState(() => _music = v);
+                SoundService.setMusicEnabled(prefs, v);
+              }),
+              if (_music) ...[
+                const SizedBox(height: 10),
+                _musicVolumeRow(prefs),
               ],
               const SizedBox(height: 10),
               _toggleRow('Вибрация', _vibration, (v) {
@@ -502,6 +522,39 @@ class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
         SizedBox(
           width: 40,
           child: Text('${(_volume * 100).round()}%',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                  color: Colors.white70, fontWeight: FontWeight.w700)),
+        ),
+      ]),
+    );
+  }
+
+  Widget _musicVolumeRow(SharedPreferences prefs) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(children: [
+        const Icon(Icons.music_note, color: Colors.white54, size: 20),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Slider(
+            value: _musicVolume,
+            activeColor: kGold,
+            label: '${(_musicVolume * 100).round()}%',
+            divisions: 20,
+            onChanged: (v) {
+              setState(() => _musicVolume = v);
+              SoundService.setMusicVolume(prefs, v);
+            },
+          ),
+        ),
+        SizedBox(
+          width: 40,
+          child: Text('${(_musicVolume * 100).round()}%',
               textAlign: TextAlign.right,
               style: const TextStyle(
                   color: Colors.white70, fontWeight: FontWeight.w700)),

@@ -1,7 +1,9 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Идентификаторы звуковых эффектов (для пофайловых настроек и админ-дефолтов).
+import 'content_audio.dart';
+
+/// Идентификаторы звуковых эффектов (для пофайловых настроек и замены файла).
 enum Sfx { splash, bite, catchFish, reel, sonar, rain }
 
 extension SfxMeta on Sfx {
@@ -39,60 +41,51 @@ extension SfxMeta on Sfx {
       };
 }
 
-/// Звуки игры: короткие синтезированные эффекты (assets/audio, оригинальные).
-///
-/// Пул плееров по кругу, чтобы эффекты могли накладываться. Настройки:
-/// мастер-выключатель [enabled], общая громкость [volume] и пофайловые
-/// переключатели. Дефолты можно задать в админке (см. `ContentOverrides.audio`
-/// → [applyAdminDefaults]); настройки игрока их переопределяют.
+/// Аудио игры: короткие эффекты (перекрываются пулом плееров) и фоновая
+/// музыка меню (луп). Громкость и переключатели — настройки ИГРОКА (в игре).
+/// Сами файлы (эффекты и музыку) можно заменить в админке — см. [audioSource]
+/// (свой файл → встроенный ассет).
 class SoundService {
   SoundService._();
 
+  // Эффекты.
   static bool enabled = true;
   static double volume = 0.9;
   static final Map<String, bool> _effectOn = {
     for (final s in Sfx.values) s.key: true,
   };
 
-  // Админ-дефолты (применяются, если у игрока нет своей настройки).
-  static bool _defEnabled = true;
-  static double _defVolume = 0.9;
-  static final Map<String, bool> _defEffectOn = {
-    for (final s in Sfx.values) s.key: true,
-  };
+  // Музыка меню.
+  static bool musicEnabled = true;
+  static double musicVolume = 0.5;
+  static const musicFile = 'menu_music.wav';
+  static const musicKey = 'music';
 
   static final List<AudioPlayer> _pool = [
     for (var i = 0; i < 4; i++) AudioPlayer()..setReleaseMode(ReleaseMode.stop),
   ];
   static int _next = 0;
+  static final AudioPlayer _music = AudioPlayer()
+    ..setReleaseMode(ReleaseMode.loop);
+  static final AudioPlayer _preview = AudioPlayer()
+    ..setReleaseMode(ReleaseMode.stop);
+  static bool _musicPlaying = false;
 
   static bool isEffectOn(Sfx s) => _effectOn[s.key] ?? true;
 
-  /// Дефолты из админки (override-слой). Вызывается на старте до чтения prefs.
-  static void applyAdminDefaults({
-    bool? enabled,
-    double? volume,
-    Map<String, bool>? effects,
-  }) {
-    if (enabled != null) _defEnabled = enabled;
-    if (volume != null) _defVolume = volume.clamp(0.0, 1.0);
-    if (effects != null) {
-      for (final e in effects.entries) {
-        _defEffectOn[e.key] = e.value;
-      }
+  /// Настройки игрока. Ключи prefs: `settings.sound`, `settings.soundVolume`,
+  /// `settings.sfx.<key>`, `settings.music`, `settings.musicVolume`.
+  static void loadFromPrefs(SharedPreferences prefs) {
+    enabled = prefs.getBool('settings.sound') ?? true;
+    volume = prefs.getDouble('settings.soundVolume') ?? 0.9;
+    for (final s in Sfx.values) {
+      _effectOn[s.key] = prefs.getBool('settings.sfx.${s.key}') ?? true;
     }
+    musicEnabled = prefs.getBool('settings.music') ?? true;
+    musicVolume = prefs.getDouble('settings.musicVolume') ?? 0.5;
   }
 
-  /// Настройки игрока (перекрывают дефолты). Ключи prefs:
-  /// `settings.sound`, `settings.soundVolume`, `settings.sfx.<key>`.
-  static void loadFromPrefs(SharedPreferences prefs) {
-    enabled = prefs.getBool('settings.sound') ?? _defEnabled;
-    volume = prefs.getDouble('settings.soundVolume') ?? _defVolume;
-    for (final s in Sfx.values) {
-      _effectOn[s.key] = prefs.getBool('settings.sfx.${s.key}') ??
-          (_defEffectOn[s.key] ?? true);
-    }
-  }
+  // --- Эффекты ------------------------------------------------------------------
 
   static void setEnabled(SharedPreferences prefs, bool v) {
     enabled = v;
@@ -113,9 +106,8 @@ class SoundService {
     if (!enabled || volume <= 0 || !(_effectOn[s.key] ?? true)) return;
     final p = _pool[_next];
     _next = (_next + 1) % _pool.length;
-    // Ошибки аудио не должны ронять геймплей (нет устройства и т.п.).
     p
-        .play(AssetSource('audio/${s.file}'), volume: s.baseVolume * volume)
+        .play(audioSource(s.key, s.file), volume: s.baseVolume * volume)
         .catchError((_) {});
   }
 
@@ -125,4 +117,47 @@ class SoundService {
   static void reelClick() => play(Sfx.reel);
   static void sonarBeep() => play(Sfx.sonar);
   static void rainStart() => play(Sfx.rain);
+
+  // --- Музыка меню --------------------------------------------------------------
+
+  static void startMenuMusic() {
+    if (!musicEnabled || musicVolume <= 0) return;
+    if (_musicPlaying) {
+      _music.setVolume(musicVolume);
+      return;
+    }
+    _musicPlaying = true;
+    _music
+        .play(audioSource(musicKey, musicFile), volume: musicVolume)
+        .catchError((_) {
+      _musicPlaying = false;
+    });
+  }
+
+  static void stopMenuMusic() {
+    _musicPlaying = false;
+    _music.stop().catchError((_) {});
+  }
+
+  static void setMusicEnabled(SharedPreferences prefs, bool v) {
+    musicEnabled = v;
+    prefs.setBool('settings.music', v);
+    if (v) {
+      startMenuMusic();
+    } else {
+      stopMenuMusic();
+    }
+  }
+
+  static void setMusicVolume(SharedPreferences prefs, double v) {
+    musicVolume = v.clamp(0.0, 1.0);
+    prefs.setDouble('settings.musicVolume', musicVolume);
+    if (_musicPlaying) _music.setVolume(musicVolume);
+  }
+
+  /// Разовое прослушивание файла (для проверки в админке/настройках).
+  static void previewOnce(String key, String assetFile) {
+    _preview.stop();
+    _preview.play(audioSource(key, assetFile), volume: 0.9).catchError((_) {});
+  }
 }
