@@ -881,7 +881,8 @@ class _CloudFieldPainter extends CustomPainter {
           final bx = c.dx + math.cos(ang) * dr;
           final by = c.dy + math.sin(ang) * dr;
           final sway = math.sin((phase + rnd.nextDouble()) * 6.2832) * 3;
-          final fall = ((rnd.nextDouble() + phase * 0.5) % 1.0) * rPx * 0.6;
+          // Целое число циклов за период анимации → петля без «скачка».
+          final fall = ((rnd.nextDouble() + phase) % 1.0) * rPx * 0.6;
           canvas.drawCircle(Offset(bx + sway, by - rPx * 0.3 + fall), 1.5, p);
         }
       } else {
@@ -894,7 +895,8 @@ class _CloudFieldPainter extends CustomPainter {
           final dr = math.sqrt(rnd.nextDouble()) * rPx * 0.95;
           final bx = c.dx + math.cos(ang) * dr;
           final by = c.dy + math.sin(ang) * dr;
-          final fall = ((rnd.nextDouble() + phase * 1.5) % 1.0) * rPx * 0.6;
+          // Целое число циклов за период анимации → петля без «скачка».
+          final fall = ((rnd.nextDouble() + phase * 2) % 1.0) * rPx * 0.6;
           final y = by - rPx * 0.3 + fall;
           canvas.drawLine(Offset(bx, y), Offset(bx - 1.6, y + 6.5), p);
         }
