@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../features/map/region_store.dart';
+
 const _gold = Color(0xFFE4B857);
+const _panel = Color(0xFF161C23);
 
 /// Значок-подсказка: наведи (или тапни) — появится пояснение, что это за поле
 /// и зачем. Используется по всей админке рядом с полями и заголовками.
@@ -83,6 +86,74 @@ class AdminSectionHeader extends StatelessWidget {
         ),
         if (info.isNotEmpty) InfoDot(info),
       ],
+    );
+  }
+}
+
+/// Строка фильтра списка по региону: «Найти → регион» + счётчик и сброс.
+class RegionFilterBar extends StatelessWidget {
+  const RegionFilterBar({
+    super.key,
+    required this.regions,
+    required this.selected,
+    required this.shownCount,
+    required this.word,
+    required this.onChanged,
+  });
+  final List<RuRegion> regions;
+  final RuRegion? selected;
+  final int shownCount;
+  final String word;
+  final ValueChanged<RuRegion?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        decoration: BoxDecoration(
+          color: _panel,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: (selected != null ? _gold : Colors.white24)
+                  .withValues(alpha: 0.5)),
+        ),
+        child: Row(children: [
+          Icon(Icons.search,
+              color: selected != null ? _gold : Colors.white54, size: 18),
+          const SizedBox(width: 6),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<RuRegion?>(
+                value: selected,
+                isExpanded: true,
+                menuMaxHeight: 340,
+                hint: const Text('Фильтр по региону — найти',
+                    style: TextStyle(color: Colors.white54)),
+                dropdownColor: _panel,
+                style: const TextStyle(color: Colors.white),
+                items: [
+                  const DropdownMenuItem(
+                      value: null, child: Text('— все регионы —')),
+                  for (final r in regions)
+                    DropdownMenuItem(value: r, child: Text(r.nameRu)),
+                ],
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+          if (selected != null) ...[
+            Text('$shownCount $word',
+                style: const TextStyle(color: _gold, fontSize: 12.5)),
+            IconButton(
+              tooltip: 'Сбросить',
+              onPressed: () => onChanged(null),
+              icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+            ),
+          ],
+        ]),
+      ),
     );
   }
 }

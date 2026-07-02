@@ -7,6 +7,7 @@ import '../features/map/region_store.dart';
 import '../features/map/russia_geo.dart';
 import '../features/tournaments/tournament.dart';
 import '../shared/content_images.dart';
+import 'admin_widgets.dart';
 import 'image_picker.dart';
 import 'map_view.dart';
 import 'zone_editor.dart';
@@ -29,6 +30,20 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
   bool _dirty = false;
   List<RuRegion> _regions = [];
   Rect? _bounds;
+  RuRegion? _filter;
+
+  /// Точка турнира на карте: своя, иначе геопозиция водоёма.
+  (double, double)? _tourPoint(Tournament t) =>
+      t.hasOwnPoint ? (t.lon, t.lat) : activeWaterGeo()[t.locationId];
+
+  List<Tournament> get _shown {
+    final f = _filter;
+    if (f == null) return _list;
+    return _list.where((t) {
+      final p = _tourPoint(t);
+      return p != null && f.contains(p.$1, p.$2);
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -70,6 +85,7 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
         regions: _regions,
         bounds: _bounds!,
         pins: pins,
+        itemWord: 'турниров',
         pinColor: const Color(0xFFE5483B),
         onTapPin: (id) {
           Navigator.of(context).pop();
@@ -160,19 +176,26 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
       ),
       body: Column(children: [
         _overview(),
+        RegionFilterBar(
+          regions: _regions,
+          selected: _filter,
+          shownCount: _shown.length,
+          word: 'турниров',
+          onChanged: (r) => setState(() => _filter = r),
+        ),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            itemCount: _list.length,
+            itemCount: _shown.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (_, i) => _row(_list[i], i),
+            itemBuilder: (_, i) => _row(_shown[i]),
           ),
         ),
       ]),
     );
   }
 
-  /// Карта турниров: точка на водоёме каждого турнира; тап — открыть правку.
+  /// Карта турниров: точки турниров (тап — правка), тап по региону — фильтр.
   Widget _overview() {
     if (_regions.isEmpty || _bounds == null) {
       return const SizedBox(
@@ -180,7 +203,7 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
     }
     return Container(
       height: 240,
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       decoration: BoxDecoration(
         color: const Color(0xFF0B1016),
         borderRadius: BorderRadius.circular(12),
@@ -190,32 +213,54 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
       child: LayoutBuilder(builder: (ctx, c) {
         final size = Size(c.maxWidth, c.maxHeight);
         final t = RussiaMapTransform.fitRaw(_bounds!, size, paddingFrac: 0.02);
-        final geo = activeWaterGeo();
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (d) {
-            Tournament? best;
-            var bestD = 20.0;
-            for (final tt in _list) {
-              final g = geo[tt.locationId];
-              if (g == null) continue;
-              final dd = (t.map(g.$1, g.$2) - d.localPosition).distance;
-              if (dd < bestD) {
-                bestD = dd;
-                best = tt;
+        return Stack(children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (d) {
+              Tournament? best;
+              var bestD = 16.0;
+              for (final tt in _list) {
+                final g = _tourPoint(tt);
+                if (g == null) continue;
+                final dd = (t.map(g.$1, g.$2) - d.localPosition).distance;
+                if (dd < bestD) {
+                  bestD = dd;
+                  best = tt;
+                }
               }
-            }
-            if (best != null) _openForm(best);
-          },
-          child: CustomPaint(
-              size: size,
-              painter: _TourMapPainter(t, _regions, _list, geo)),
-        );
+              if (best != null) {
+                _openForm(best);
+                return;
+              }
+              final geo = t.unmap(d.localPosition);
+              for (final r in _regions) {
+                if (r.contains(geo.$1, geo.$2)) {
+                  setState(() =>
+                      _filter = r.nameEn == _filter?.nameEn ? null : r);
+                  return;
+                }
+              }
+            },
+            child: CustomPaint(
+                size: size,
+                painter: _TourMapPainter(
+                    t, _regions, _list, activeWaterGeo(), _filter)),
+          ),
+          Positioned(
+            right: 8,
+            top: 8,
+            child: IconButton(
+              tooltip: 'Открыть карту (зум, регионы)',
+              onPressed: _openBigMap,
+              icon: const Icon(Icons.open_in_full, color: _gold, size: 20),
+            ),
+          ),
+        ]);
       }),
     );
   }
 
-  Widget _row(Tournament t, int i) {
+  Widget _row(Tournament t) {
     return Container(
       decoration: BoxDecoration(
         color: _panel,
@@ -265,7 +310,7 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
           IconButton(
             tooltip: 'Удалить',
             onPressed: () => setState(() {
-              _list.removeAt(i);
+              _list.removeWhere((e) => e.id == t.id);
               _dirty = true;
             }),
             icon: const Icon(Icons.delete_outline,
@@ -671,11 +716,12 @@ class _TournamentFormState extends State<_TournamentForm> {
 }
 
 class _TourMapPainter extends CustomPainter {
-  _TourMapPainter(this.t, this.regions, this.list, this.geo);
+  _TourMapPainter(this.t, this.regions, this.list, this.geo, this.sel);
   final RussiaMapTransform t;
   final List<RuRegion> regions;
   final List<Tournament> list;
   final Map<String, (double, double)> geo;
+  final RuRegion? sel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -685,6 +731,7 @@ class _TourMapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5
       ..color = const Color(0x2AFFFFFF);
+    const red = Color(0xFFE5483B);
     for (final r in regions) {
       final path = Path();
       for (final ring in r.rings) {
@@ -698,24 +745,37 @@ class _TourMapPainter extends CustomPainter {
         }
         path.close();
       }
-      canvas.drawPath(path, Paint()..color = const Color(0xFF16221B));
-      canvas.drawPath(path, border);
+      final isSel = sel != null && r.nameEn == sel!.nameEn;
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = isSel ? const Color(0xFF33201C) : const Color(0xFF16221B));
+      canvas.drawPath(
+          path,
+          isSel
+              ? (Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1.4
+                ..color = red)
+              : border);
     }
     final tp = TextPainter(textDirection: TextDirection.ltr);
-    const red = Color(0xFFE5483B);
     for (final tt in list) {
       final g = tt.hasOwnPoint ? (tt.lon, tt.lat) : geo[tt.locationId];
       if (g == null) continue;
+      final inSel = sel == null || sel!.contains(g.$1, g.$2);
       final p = t.map(g.$1, g.$2);
-      canvas.drawCircle(p, 6, Paint()..color = red.withValues(alpha: 0.25));
-      canvas.drawCircle(p, 3.4, Paint()..color = red);
+      final col = inSel ? red : red.withValues(alpha: 0.18);
+      canvas.drawCircle(p, 6, Paint()..color = col.withValues(alpha: 0.25));
+      canvas.drawCircle(p, 3.4, Paint()..color = col);
       canvas.drawCircle(
           p,
           3.4,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1
-            ..color = Colors.black);
+            ..color = Colors.black.withValues(alpha: inSel ? 1 : 0.3));
+      if (!inSel) continue;
       tp.text = TextSpan(
           text: tt.title,
           style: const TextStyle(
