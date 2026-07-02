@@ -10,13 +10,31 @@ import '../../domain/repositories/player_repository.dart';
 /// Достаточно для одиночной локальной игры; при появлении сервера заменяется
 /// на сетевую реализацию [PlayerRepository] без изменений в UI.
 class LocalPlayerRepository implements PlayerRepository {
-  LocalPlayerRepository(this._prefs);
+  LocalPlayerRepository(this._prefs, {this.accountId});
 
   final SharedPreferences _prefs;
-  static const _key = 'player_save_v1';
+
+  /// Аккаунт, чей прогресс загружаем. У каждого аккаунта — свой сейв. Null —
+  /// старый общий сейв (совместимость/тесты).
+  final String? accountId;
+
+  static const _legacyKey = 'player_save_v1';
+  static const playerKeyPrefix = 'player_save_v1__';
+
+  String get _key =>
+      accountId == null ? _legacyKey : '$playerKeyPrefix$accountId';
 
   @override
   Future<Player?> load() async {
+    // Миграция: первый вход аккаунта наследует прежний общий сейв (один раз),
+    // затем общий ключ удаляется — новые аккаунты начинают с чистой игры.
+    if (accountId != null && !_prefs.containsKey(_key)) {
+      final legacy = _prefs.getString(_legacyKey);
+      if (legacy != null) {
+        await _prefs.setString(_key, legacy);
+        await _prefs.remove(_legacyKey);
+      }
+    }
     final raw = _prefs.getString(_key);
     if (raw == null) return null;
     try {

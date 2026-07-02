@@ -220,6 +220,34 @@ class AccountStore {
         salt: salt, passwordHash: PasswordHash.hash(password, salt)));
   }
 
+  /// Смена реферального кода аккаунта. Возвращает ошибку валидации/занятости
+  /// или null при успехе.
+  Future<String?> changeReferral(String id, String code) async {
+    final acc = byId(id);
+    if (acc == null) return 'Аккаунт не найден';
+    final c = code.trim().toUpperCase();
+    if (!RegExp(r'^[A-Z0-9]{4,12}$').hasMatch(c)) {
+      return 'Код: 4–12 символов (латиница/цифры)';
+    }
+    if (all().any((a) => a.id != id && a.referralCode == c)) {
+      return 'Такой код уже занят';
+    }
+    await update(acc.copyWith(referralCode: c));
+    return null;
+  }
+
+  /// JSON сейва прогресса аккаунта (для просмотра в админке). Null — не играл.
+  Map<String, Object?>? playerSave(String accountId) {
+    final raw = _prefs.getString('player_save_v1__$accountId');
+    if (raw == null) return null;
+    try {
+      final j = jsonDecode(raw);
+      return j is Map ? Map<String, Object?>.from(j) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Создание аккаунта админом (без входа под ним). Возвращает ошибку валидации.
   Future<AuthResult> adminCreate({
     required String username,

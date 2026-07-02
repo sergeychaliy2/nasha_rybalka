@@ -32,9 +32,12 @@ final sharedPreferencesProvider = Provider<SharedPreferences>(
 final contentRepositoryProvider =
     Provider<ContentRepository>((ref) => SeedContentRepository());
 
-final playerRepositoryProvider = Provider<PlayerRepository>(
-  (ref) => LocalPlayerRepository(ref.watch(sharedPreferencesProvider)),
-);
+final playerRepositoryProvider = Provider<PlayerRepository>((ref) {
+  // Прогресс — свой у каждого аккаунта: ключ сейва зависит от активного входа.
+  final account = ref.watch(currentAccountProvider);
+  return LocalPlayerRepository(ref.watch(sharedPreferencesProvider),
+      accountId: account?.id);
+});
 
 /// Локальное хранилище аккаунтов (вход/регистрация/реферал).
 final accountStoreProvider =

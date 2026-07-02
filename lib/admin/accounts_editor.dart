@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../data/account_store.dart';
 import '../domain/entities/account.dart';
+import '../domain/entities/player.dart';
+import '../domain/value_objects/currency.dart';
 import '../shared/countries.dart';
 
 const _gold = Color(0xFFE4B857);
@@ -215,6 +217,15 @@ class _AccountsEditorState extends State<AccountsEditor> {
               ),
             ),
             IconButton(
+              tooltip: 'Прогресс игрока',
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => _PlayerInfoDialog(store: widget.store, acc: a),
+              ),
+              icon: const Icon(Icons.insights,
+                  color: Color(0xFF5AA9E6), size: 19),
+            ),
+            IconButton(
               tooltip: a.banned ? 'Разблокировать' : 'Заблокировать',
               onPressed: () async {
                 await widget.store.update(a.copyWith(banned: !a.banned));
@@ -263,6 +274,7 @@ class _AccountDialogState extends State<_AccountDialog> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _note = TextEditingController();
+  final _referral = TextEditingController();
   AccountRole _role = AccountRole.player;
   bool _banned = false;
   String _country = 'RU';
@@ -278,6 +290,7 @@ class _AccountDialogState extends State<_AccountDialog> {
       _username.text = a.username;
       _email.text = a.email;
       _note.text = a.note;
+      _referral.text = a.referralCode;
       _role = a.role;
       _banned = a.banned;
       _country = a.country;
@@ -286,7 +299,7 @@ class _AccountDialogState extends State<_AccountDialog> {
 
   @override
   void dispose() {
-    for (final c in [_username, _email, _password, _note]) {
+    for (final c in [_username, _email, _password, _note, _referral]) {
       c.dispose();
     }
     super.dispose();
@@ -296,9 +309,21 @@ class _AccountDialogState extends State<_AccountDialog> {
     final store = widget.store;
     if (_isEdit) {
       final a = widget.initial!;
+      final ref = _referral.text.trim().toUpperCase();
+      if (ref != a.referralCode) {
+        if (!RegExp(r'^[A-Z0-9]{4,12}$').hasMatch(ref)) {
+          setState(() => _error = 'Код: 4–12 символов (латиница/цифры)');
+          return;
+        }
+        if (store.all().any((x) => x.id != a.id && x.referralCode == ref)) {
+          setState(() => _error = 'Такой реферальный код уже занят');
+          return;
+        }
+      }
       await store.update(a.copyWith(
         username: _username.text.trim(),
         email: _email.text.trim(),
+        referralCode: ref,
         role: _role,
         banned: _banned,
         country: _country,
@@ -343,6 +368,8 @@ class _AccountDialogState extends State<_AccountDialog> {
             _field(_username, 'Имя'),
             _field(_email, 'E-mail'),
             _field(_password, _isEdit ? 'Новый пароль (пусто — не менять)' : 'Пароль'),
+            if (_isEdit)
+              _field(_referral, 'Реферальный код (можно сменить)'),
             _field(_note, 'Заметка администратора', lines: 2),
             const SizedBox(height: 4),
             Row(children: [
@@ -358,7 +385,14 @@ class _AccountDialogState extends State<_AccountDialog> {
                   style: const TextStyle(color: Colors.white),
                   items: [
                     for (final c in kCountries)
-                      DropdownMenuItem(value: c.code, child: Text(c.nameRu)),
+                      DropdownMenuItem(
+                        value: c.code,
+                        child: Row(children: [
+                          FlagIcon(c.code, width: 22, height: 15),
+                          const SizedBox(width: 10),
+                          Text(c.nameRu),
+                        ]),
+                      ),
                   ],
                   onChanged: (v) => setState(() => _country = v ?? _country),
                 ),
@@ -438,4 +472,180 @@ class _AccountDialogState extends State<_AccountDialog> {
           ),
         ),
       );
+}
+
+String _rankRu(int lvl) {
+  if (lvl >= 25) return 'Легенда';
+  if (lvl >= 20) return 'Мастер';
+  if (lvl >= 15) return 'Эксперт';
+  if (lvl >= 10) return 'Рыболов';
+  if (lvl >= 5) return 'Любитель';
+  return 'Новичок';
+}
+
+/// Красивая карточка прогресса игрока (читает сейв аккаунта из общего стора).
+class _PlayerInfoDialog extends StatelessWidget {
+  const _PlayerInfoDialog({required this.store, required this.acc});
+  final AccountStore store;
+  final Account acc;
+
+  @override
+  Widget build(BuildContext context) {
+    final save = store.playerSave(acc.id);
+    Player? p;
+    if (save != null) {
+      try {
+        p = Player.fromJson(save);
+      } catch (_) {}
+    }
+    return Dialog(
+      backgroundColor: _panel,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: p == null
+              ? Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.sports_esports_outlined,
+                      color: Colors.white38, size: 40),
+                  const SizedBox(height: 10),
+                  Text('${acc.username} ещё не начинал игру',
+                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 12),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child:
+                          const Text('Закрыть', style: TextStyle(color: _gold))),
+                ])
+              : _body(context, p),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, Player p) {
+    final caught = p.speciesCounts.values.fold<int>(0, (s, v) => s + v);
+    var recordG = 0;
+    for (final t in p.trophies) {
+      if (t.weight.grams > recordG) recordG = t.weight.grams;
+    }
+    final record =
+        recordG == 0 ? '—' : '${(recordG / 1000).toStringAsFixed(2)} кг';
+    final premium = (p.premiumTier > 0 &&
+            p.premiumUntil != null &&
+            p.premiumUntil!.isAfter(DateTime.now()))
+        ? 'ур. ${p.premiumTier}'
+        : 'нет';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                  colors: [Color(0xFFF6D98A), _gold]),
+            ),
+            child: Text('${p.level}',
+                style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  FlagIcon(acc.country, width: 22, height: 15),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(acc.username,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900)),
+                  ),
+                ]),
+                Text('${_rankRu(p.level)} · уровень ${p.level}',
+                    style: const TextStyle(color: _gold, fontSize: 12.5)),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close, color: Colors.white54),
+          ),
+        ]),
+        const SizedBox(height: 14),
+        Wrap(spacing: 10, runSpacing: 10, children: [
+          _tile(Icons.scale, const Color(0xFF7FD4A3), 'Всего выловлено',
+              '${(p.totalCaughtGrams / 1000).toStringAsFixed(1)} кг'),
+          _tile(Icons.emoji_events, const Color(0xFFB98CFF), 'Рекорд', record),
+          _tile(Icons.phishing, const Color(0xFF5AA9E6), 'Поймано рыб',
+              '$caught'),
+          _tile(Icons.menu_book, const Color(0xFF54C9C9), 'Видов открыто',
+              '${p.discoveredSpeciesIds.length}'),
+          _tile(Icons.place, const Color(0xFF6FBF73), 'Водоёмов открыто',
+              '${p.unlockedLocationIds.length}'),
+          _tile(Icons.public, const Color(0xFF9AA4AD), 'Стран открыто',
+              '${p.unlockedCountryIds.length}'),
+          _tile(Icons.shield, const Color(0xFFE0864A), 'Побед в турнирах',
+              '${p.tournamentWins}'),
+          _tile(Icons.paid, const Color(0xFFCBD3DA), 'Серебро',
+              '${p.wallet.balanceOf(CurrencyType.silver)}'),
+          _tile(Icons.diamond, _gold, 'Золото',
+              '${p.wallet.balanceOf(CurrencyType.gold)}'),
+          _tile(Icons.workspace_premium, const Color(0xFFF0B93B), 'Премиум',
+              premium),
+        ]),
+      ],
+    );
+  }
+
+  Widget _tile(IconData icon, Color col, String label, String value) {
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: col.withValues(alpha: 0.3)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: col, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700)),
+              Text(value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900)),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
 }
