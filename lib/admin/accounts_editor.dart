@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/account_store.dart';
 import '../domain/entities/account.dart';
+import '../shared/countries.dart';
 
 const _gold = Color(0xFFE4B857);
 const _panel = Color(0xFF161C23);
@@ -172,6 +173,10 @@ class _AccountsEditorState extends State<AccountsEditor> {
               child: Icon(isAdmin ? Icons.shield : Icons.person,
                   color: isAdmin ? _gold : const Color(0xFF5AA9E6), size: 18),
             ),
+            const SizedBox(width: 8),
+            Tooltip(
+                message: countryByCode(a.country).nameRu,
+                child: FlagIcon(a.country)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -260,6 +265,7 @@ class _AccountDialogState extends State<_AccountDialog> {
   final _note = TextEditingController();
   AccountRole _role = AccountRole.player;
   bool _banned = false;
+  String _country = 'RU';
   String? _error;
 
   bool get _isEdit => widget.initial != null;
@@ -274,6 +280,7 @@ class _AccountDialogState extends State<_AccountDialog> {
       _note.text = a.note;
       _role = a.role;
       _banned = a.banned;
+      _country = a.country;
     }
   }
 
@@ -294,6 +301,7 @@ class _AccountDialogState extends State<_AccountDialog> {
         email: _email.text.trim(),
         role: _role,
         banned: _banned,
+        country: _country,
         note: _note.text.trim(),
       ));
       if (_password.text.trim().isNotEmpty) {
@@ -305,6 +313,7 @@ class _AccountDialogState extends State<_AccountDialog> {
         username: _username.text,
         email: _email.text,
         password: _password.text,
+        country: _country,
         role: _role,
       );
       if (!mounted) return;
@@ -335,6 +344,26 @@ class _AccountDialogState extends State<_AccountDialog> {
             _field(_email, 'E-mail'),
             _field(_password, _isEdit ? 'Новый пароль (пусто — не менять)' : 'Пароль'),
             _field(_note, 'Заметка администратора', lines: 2),
+            const SizedBox(height: 4),
+            Row(children: [
+              const Text('Страна:', style: TextStyle(color: Colors.white70)),
+              const SizedBox(width: 10),
+              FlagIcon(_country),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButton<String>(
+                  value: _country,
+                  isExpanded: true,
+                  dropdownColor: _panel,
+                  style: const TextStyle(color: Colors.white),
+                  items: [
+                    for (final c in kCountries)
+                      DropdownMenuItem(value: c.code, child: Text(c.nameRu)),
+                  ],
+                  onChanged: (v) => setState(() => _country = v ?? _country),
+                ),
+              ),
+            ]),
             const SizedBox(height: 8),
             Row(children: [
               const Text('Роль:', style: TextStyle(color: Colors.white70)),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../shared/countries.dart';
 import '../shell/ui_kit.dart';
 import 'policy_screen.dart';
 
@@ -19,6 +20,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _busy = false;
   String? _error;
   bool _obscure = true;
+  String _country = 'RU';
 
   final _login = TextEditingController();
   final _username = TextEditingController();
@@ -46,6 +48,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             email: _email.text,
             password: _password.text,
             referral: _referral.text,
+            country: _country,
           )
         : await store.login(_login.text, _password.text);
     if (!mounted) return;
@@ -96,6 +99,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       if (_register) ...[
                         _field(_username, 'Имя рыбака', Icons.person),
                         _field(_email, 'E-mail', Icons.alternate_email),
+                        _countryField(),
                       ] else
                         _field(_login, 'Имя или e-mail', Icons.person),
                       _field(_password, 'Пароль', Icons.lock,
@@ -207,6 +211,52 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       const SizedBox(width: 8),
       tab('Регистрация', true),
     ]);
+  }
+
+  Widget _countryField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Страна проживания',
+          labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.all(11),
+            child: FlagIcon(_country),
+          ),
+          filled: true,
+          fillColor: Colors.black.withValues(alpha: 0.3),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: _country,
+            isExpanded: true,
+            dropdownColor: const Color(0xFF161C23),
+            style: const TextStyle(color: Colors.white),
+            items: [
+              for (final c in kCountries)
+                DropdownMenuItem(
+                  value: c.code,
+                  child: Row(children: [
+                    FlagIcon(c.code, width: 22, height: 15),
+                    const SizedBox(width: 10),
+                    Text(c.nameRu),
+                  ]),
+                ),
+            ],
+            onChanged: (v) => setState(() => _country = v ?? _country),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _field(TextEditingController c, String label, IconData icon,

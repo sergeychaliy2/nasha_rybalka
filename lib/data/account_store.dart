@@ -93,22 +93,55 @@ class AccountStore {
   // --- Регистрация / вход ------------------------------------------------------
 
   static final _userRe = RegExp(r'^[A-Za-zА-Яа-я0-9_ .-]{3,24}$');
-  static final _emailRe = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+  static final _emailRe = RegExp(
+      r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+  /// Известные почтовые сервисы — принимаем только их (защита от опечаток и
+  /// «мусорных» доменов). Список легко расширить.
+  static const knownEmailDomains = {
+    'gmail.com',
+    'googlemail.com',
+    'yandex.ru',
+    'yandex.com',
+    'ya.ru',
+    'mail.ru',
+    'bk.ru',
+    'list.ru',
+    'inbox.ru',
+    'internet.ru',
+    'rambler.ru',
+    'outlook.com',
+    'hotmail.com',
+    'live.com',
+    'icloud.com',
+    'me.com',
+    'yahoo.com',
+    'proton.me',
+    'protonmail.com',
+    'gmx.com',
+  };
 
   Future<AuthResult> register({
     required String username,
     required String email,
     required String password,
     String referral = '',
+    String country = 'RU',
     AccountRole role = AccountRole.player,
   }) async {
     final u = username.trim();
-    final e = email.trim();
+    final e = email.trim().toLowerCase();
     if (!_userRe.hasMatch(u)) {
       return const AuthResult.fail('Имя: 3–24 символа (буквы, цифры, _ . -)');
     }
     if (!_emailRe.hasMatch(e)) {
-      return const AuthResult.fail('Некорректный e-mail');
+      return const AuthResult.fail('Некорректный e-mail (пример: name@yandex.ru)');
+    }
+    final domain = e.split('@').last;
+    if (!knownEmailDomains.contains(domain)) {
+      return const AuthResult.fail(
+          'Домен не поддерживается. Используйте gmail.com, yandex.ru, '
+          'mail.ru, outlook.com и подобные.');
     }
     if (password.length < 6) {
       return const AuthResult.fail('Пароль не короче 6 символов');
@@ -137,6 +170,7 @@ class AccountStore {
       passwordHash: PasswordHash.hash(password, salt),
       createdAt: DateTime.now(),
       referralCode: _newReferralCode(list),
+      country: country,
       role: role,
       referredBy: referredBy,
       lastLogin: DateTime.now(),
@@ -191,11 +225,16 @@ class AccountStore {
     required String username,
     required String email,
     required String password,
+    String country = 'RU',
     AccountRole role = AccountRole.player,
   }) async {
     final saved = currentId;
     final res = await register(
-        username: username, email: email, password: password, role: role);
+        username: username,
+        email: email,
+        password: password,
+        country: country,
+        role: role);
     // Не переключаем сессию администратора на новый аккаунт.
     await _setSession(saved);
     return res;

@@ -15,6 +15,7 @@ class Account {
     required this.passwordHash,
     required this.createdAt,
     required this.referralCode,
+    this.country = 'RU',
     this.role = AccountRole.player,
     this.banned = false,
     this.referredBy,
@@ -32,6 +33,9 @@ class Account {
 
   /// Персональный реферальный код (делится с друзьями).
   final String referralCode;
+
+  /// Страна проживания (код из `countries.dart`, напр. 'RU').
+  final String country;
   final AccountRole role;
   final bool banned;
 
@@ -53,6 +57,7 @@ class Account {
     String? email,
     String? salt,
     String? passwordHash,
+    String? country,
     AccountRole? role,
     bool? banned,
     String? referredBy,
@@ -68,6 +73,7 @@ class Account {
         passwordHash: passwordHash ?? this.passwordHash,
         createdAt: createdAt,
         referralCode: referralCode,
+        country: country ?? this.country,
         role: role ?? this.role,
         banned: banned ?? this.banned,
         referredBy: referredBy ?? this.referredBy,
@@ -84,6 +90,7 @@ class Account {
         'passwordHash': passwordHash,
         'createdAt': createdAt.toIso8601String(),
         'referralCode': referralCode,
+        'country': country,
         'role': role.name,
         'banned': banned,
         'referredBy': referredBy,
@@ -101,6 +108,7 @@ class Account {
         createdAt:
             DateTime.tryParse((j['createdAt'] ?? '') as String) ?? DateTime(2020),
         referralCode: (j['referralCode'] ?? '') as String,
+        country: (j['country'] ?? 'RU') as String,
         role: AccountRole.values.asNameMap()[j['role']] ?? AccountRole.player,
         banned: (j['banned'] as bool?) ?? false,
         referredBy: j['referredBy'] as String?,

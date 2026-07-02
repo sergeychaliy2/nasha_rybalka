@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/value_objects/currency.dart';
+import '../../shared/countries.dart';
 import '../daily/daily_dialog.dart';
 import '../menu/main_menu_screen.dart';
 import '../shell/ui_kit.dart';
@@ -449,6 +450,15 @@ class _AccountBlockState extends ConsumerState<AccountBlock> {
                       style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 11.5)),
+                  const SizedBox(height: 3),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    FlagIcon(acc.country, width: 20, height: 13),
+                    const SizedBox(width: 6),
+                    Text(countryByCode(acc.country).nameRu,
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 11.5)),
+                  ]),
                 ],
               ),
             ),
