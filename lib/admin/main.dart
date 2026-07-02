@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/account_store.dart';
 import '../data/content_overrides.dart';
 import 'admin_app.dart';
 
@@ -14,5 +15,5 @@ Future<void> main() async {
   final overrides = ContentOverrides(prefs)
     ..load()
     ..applyToGame();
-  runApp(AdminApp(overrides: overrides));
+  runApp(AdminApp(overrides: overrides, accounts: AccountStore(prefs)));
 }

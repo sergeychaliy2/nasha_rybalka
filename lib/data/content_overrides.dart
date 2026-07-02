@@ -9,6 +9,7 @@ import '../domain/services/tuning.dart';
 import '../features/fishing/water_masks.dart';
 import '../features/map/russia_geo.dart';
 import '../features/tournaments/tournament.dart';
+import '../shared/sound_service.dart';
 import 'seed/content_state.dart';
 
 /// Слой правок контента из админки поверх сид-дефолтов. Хранится в
@@ -179,6 +180,15 @@ class ContentOverrides {
 
   void clearTuning() => _data.remove('tuning');
 
+  // --- Звук по умолчанию (админ задаёт дефолты для новых игроков) ---------------
+
+  Map<String, dynamic> audio() =>
+      Map<String, dynamic>.from((_data['audio'] as Map?) ?? const {});
+
+  void setAudio(Map<String, dynamic> j) => _data['audio'] = j;
+
+  void clearAudio() => _data.remove('audio');
+
   /// Применить оверрайды к глобальному состоянию игры.
   void applyToGame() {
     setWaterMaskOverrides(waterMasks());
@@ -188,5 +198,18 @@ class ContentOverrides {
     setSpeciesOverride(species());
     setGearOverride(gear());
     Tuning.applyJson(tuning());
+    final a = audio();
+    if (a.isNotEmpty) {
+      SoundService.applyAdminDefaults(
+        enabled: a['enabled'] as bool?,
+        volume: (a['volume'] as num?)?.toDouble(),
+        effects: (a['effects'] is Map)
+            ? {
+                for (final e in (a['effects'] as Map).entries)
+                  e.key.toString(): e.value == true,
+              }
+            : null,
+      );
+    }
   }
 }

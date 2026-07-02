@@ -28,6 +28,31 @@ Color rarityColor(Rarity r) => switch (r) {
       Rarity.legendary => _gold,
     };
 
+/// Стандартные роли рыбы (быстрый выбор + иконки-обозначения).
+const kRoles = ['хищник', 'мирная', 'донная', 'морская'];
+
+IconData roleIcon(String family) {
+  final f = family.toLowerCase();
+  if (f.contains('хищ')) return Icons.bolt;
+  if (f.contains('дон')) return Icons.terrain;
+  if (f.contains('мор')) return Icons.sailing;
+  return Icons.eco; // мирная / прочее
+}
+
+Color roleColor(String family) {
+  final f = family.toLowerCase();
+  if (f.contains('хищ')) return const Color(0xFFE5726A);
+  if (f.contains('дон')) return const Color(0xFFC7A76B);
+  if (f.contains('мор')) return const Color(0xFF54C9C9);
+  return const Color(0xFF6FBF73);
+}
+
+IconData habitatIcon(Habitat h) => switch (h) {
+      Habitat.fresh => Icons.water_drop,
+      Habitat.salt => Icons.waves,
+      Habitat.brackish => Icons.opacity,
+    };
+
 /// Редактор каталога рыб: создать/править/удалить вид, все характеристики и
 /// профиль шансов клёва (наживки, время, погода, глубина, размер, цвет).
 class SpeciesEditor extends StatefulWidget {
@@ -148,6 +173,20 @@ class _SpeciesEditorState extends State<SpeciesEditor> {
             ),
           ),
         ),
+        // Легенда обозначений роли.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Wrap(spacing: 12, runSpacing: 4, children: [
+            for (final r in kRoles)
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(roleIcon(r), color: roleColor(r), size: 14),
+                const SizedBox(width: 4),
+                Text(r,
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 11)),
+              ]),
+          ]),
+        ),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -189,6 +228,24 @@ class _SpeciesEditorState extends State<SpeciesEditor> {
             ),
           ),
           const SizedBox(width: 10),
+          // Иконка-обозначение роли (хищник/мирная/донная/морская).
+          Tooltip(
+            message: s.family,
+            child: Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: roleColor(s.family).withValues(alpha: 0.18),
+                border:
+                    Border.all(color: roleColor(s.family).withValues(alpha: 0.6)),
+              ),
+              child: Icon(roleIcon(s.family),
+                  color: roleColor(s.family), size: 15),
+            ),
+          ),
+          const SizedBox(width: 8),
           Container(
             width: 10,
             height: 10,
@@ -200,11 +257,20 @@ class _SpeciesEditorState extends State<SpeciesEditor> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(s.name,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800)),
+                Row(children: [
+                  Flexible(
+                    child: Text(s.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(habitatIcon(s.habitat),
+                      color: Colors.white38, size: 13),
+                ]),
                 const SizedBox(height: 2),
                 Text(
                     '${s.group.isEmpty ? '—' : s.group} · ${rarityRu(s.rarity)} · '
@@ -415,15 +481,33 @@ class _SpeciesFormState extends State<_SpeciesForm> {
           const SizedBox(height: 12),
           _text(_name, 'Название'),
           _text(_desc, 'Описание (видно в бестиарии)', lines: 3),
-          Wrap(spacing: 12, runSpacing: 12, children: [
-            SizedBox(width: 260, child: _text(_group, 'Семейство (биол.)',
-                pad: false)),
-            SizedBox(
-                width: 220,
-                child: _text(_family, 'Роль: хищник/мирная/донная/морская',
-                    pad: false)),
-          ]),
+          SizedBox(width: 320, child: _text(_group, 'Семейство (биол.)')),
+          const Text('Роль (обозначение в списке):',
+              style: TextStyle(color: Colors.white70, fontSize: 12.5)),
           const SizedBox(height: 6),
+          StatefulBuilder(
+            builder: (context, setChip) => Wrap(spacing: 8, children: [
+              for (final r in kRoles)
+                ChoiceChip(
+                  avatar: Icon(roleIcon(r),
+                      size: 16,
+                      color: _family.text.trim() == r
+                          ? Colors.black
+                          : roleColor(r)),
+                  label: Text(r),
+                  selected: _family.text.trim() == r,
+                  selectedColor: roleColor(r),
+                  labelStyle: TextStyle(
+                      color: _family.text.trim() == r
+                          ? Colors.black
+                          : Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12),
+                  onSelected: (_) => setChip(() => _family.text = r),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 8),
           Text('Семейства в игре: ${groups.join(', ')}',
               style: const TextStyle(color: Colors.white24, fontSize: 10.5)),
           const SizedBox(height: 12),

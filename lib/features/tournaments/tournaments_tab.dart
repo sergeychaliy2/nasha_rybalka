@@ -58,9 +58,9 @@ class _TournamentCard extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Фон — живописный вид водоёма турнира.
+              // Фон — афиша турнира (своя картинка из админки → фон водоёма).
               contentImage(
-                assetStem(t.backdrop),
+                'tour_${t.id}',
                 t.backdrop,
                 alignment: Alignment.centerRight,
                 fallback: (_) =>

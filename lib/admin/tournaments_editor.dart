@@ -7,6 +7,7 @@ import '../features/map/region_store.dart';
 import '../features/map/russia_geo.dart';
 import '../features/tournaments/tournament.dart';
 import '../shared/content_images.dart';
+import 'image_picker.dart';
 import 'map_view.dart';
 import 'zone_editor.dart';
 
@@ -56,15 +57,12 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
   void _openBigMap() {
     if (_bounds == null) return;
     final geo = activeWaterGeo();
+    (double, double)? pt(Tournament t) =>
+        t.hasOwnPoint ? (t.lon, t.lat) : geo[t.locationId];
     final pins = <MapPin>[
       for (final t in _list)
-        if (geo[t.locationId] != null)
-          (
-            id: t.id,
-            label: t.title,
-            lon: geo[t.locationId]!.$1,
-            lat: geo[t.locationId]!.$2
-          ),
+        if (pt(t) != null)
+          (id: t.id, label: t.title, lon: pt(t)!.$1, lat: pt(t)!.$2),
     ];
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => AdminMapView(
@@ -231,7 +229,7 @@ class _TournamentsEditorState extends State<TournamentsEditor> {
           SizedBox(
             width: 96,
             height: 74,
-            child: contentImage(assetStem(t.backdrop), t.backdrop),
+            child: contentImage('tour_${t.id}', t.backdrop),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -289,7 +287,12 @@ class _TournamentForm extends StatefulWidget {
 
 class _TournamentFormState extends State<_TournamentForm> {
   late final Map<String, TextEditingController> _c;
-  late String _locId;
+  late final String _id;
+  late String _locId; // водоём-источник рыбы/зон для зачётной сессии
+  late double _lon;
+  late double _lat;
+  bool _placed = false;
+  RuRegion? _region;
   List<RuRegion> _regions = [];
   Rect? _bounds;
 
@@ -300,7 +303,47 @@ class _TournamentFormState extends State<_TournamentForm> {
       _regions = rs;
       _bounds = RussiaMapTransform.projectedBoundsOf(
           rs.expand((r) => r.rings).expand((ring) => ring));
+      // Восстановить регион существующего турнира: по id или по точке.
+      final t = widget.initial;
+      if (t != null) {
+        if (t.regionId.isNotEmpty) {
+          _region = rs.where((r) => r.nameEn == t.regionId).firstOrNull;
+        }
+        _region ??= _placed ? _regionAt(_lon, _lat) : null;
+      }
     });
+  }
+
+  RuRegion? _regionAt(double lon, double lat) {
+    for (final r in _regions) {
+      if (r.contains(lon, lat)) return r;
+    }
+    return null;
+  }
+
+  /// Ближайший к точке водоём внутри региона (источник рыбы). Если в регионе
+  /// водоёмов нет — ближайший в целом.
+  String _bindLocation(double lon, double lat) {
+    final geo = activeWaterGeo();
+    final locs = activeLocations();
+    String? best;
+    var bestD = double.infinity;
+    String? bestAny;
+    var bestAnyD = double.infinity;
+    for (final l in locs) {
+      final g = geo[l.id];
+      if (g == null) continue;
+      final d = (g.$1 - lon) * (g.$1 - lon) + (g.$2 - lat) * (g.$2 - lat);
+      if (d < bestAnyD) {
+        bestAnyD = d;
+        bestAny = l.id;
+      }
+      if (_region != null && _region!.contains(g.$1, g.$2) && d < bestD) {
+        bestD = d;
+        best = l.id;
+      }
+    }
+    return best ?? bestAny ?? _locId;
   }
 
   @override
@@ -340,12 +383,26 @@ class _TournamentFormState extends State<_TournamentForm> {
       _c['goldReward']!.text = '${t.goldReward}';
       _c['info']!.text = t.info;
       _locId = t.locationId;
+      _id = t.id;
+      if (t.hasOwnPoint) {
+        _lon = t.lon;
+        _lat = t.lat;
+        _placed = true;
+      } else {
+        final g = activeWaterGeo()[t.locationId];
+        _lon = g?.$1 ?? 0;
+        _lat = g?.$2 ?? 0;
+        _placed = g != null;
+      }
     } else {
       _c['stageCount']!.text = '1';
       _c['requiredLevel']!.text = '1';
       _c['durationSec']!.text = '150';
       _c['parGrams']!.text = '2000';
       _locId = activeLocations().first.id;
+      _id = 'tour_${DateTime.now().millisecondsSinceEpoch}';
+      _lon = 0;
+      _lat = 0;
     }
     _loadRegions();
   }
@@ -363,17 +420,18 @@ class _TournamentFormState extends State<_TournamentForm> {
   void _save() {
     final loc = activeLocations().firstWhere((l) => l.id == _locId,
         orElse: () => activeLocations().first);
-    final id = widget.initial?.id ??
-        'tour_${DateTime.now().millisecondsSinceEpoch}';
     Navigator.of(context).pop(Tournament(
-      id: id,
+      id: _id,
       title: _c['title']!.text.trim().isEmpty
           ? 'Новый турнир'
           : _c['title']!.text.trim(),
       dateRange: _c['dateRange']!.text.trim(),
-      locationName: loc.name,
+      locationName: _region?.nameRu ?? loc.name,
       locationId: loc.id,
       backdrop: loc.primaryBackdrop,
+      regionId: _region?.nameEn ?? '',
+      lon: _placed ? _lon : 0,
+      lat: _placed ? _lat : 0,
       stageCount: _int('stageCount', 1),
       requiredLevel: _int('requiredLevel', 1),
       entrySilver: _int('entrySilver', 0),
@@ -414,15 +472,29 @@ class _TournamentFormState extends State<_TournamentForm> {
         children: [
           _text('title', 'Название'),
           _text('dateRange', 'Подзаголовок (напр. «Серия · 3 этапа»)'),
-          const SizedBox(height: 4),
-          const Text('Место проведения: тапни водоём на карте (красная точка)',
+          const Divider(color: Colors.white12, height: 22),
+          const Text('Место проведения: выбери регион → поставь точку',
               style: TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          _venueMap(),
+          _regionRow(),
           const SizedBox(height: 8),
+          _venueMap(),
+          _hintRow(),
+          const SizedBox(height: 10),
+          AdminImagePicker(
+            key: ValueKey('tour_$_id'),
+            imageKey: 'tour_$_id',
+            asset: activeLocations()
+                    .where((l) => l.id == _locId)
+                    .map((l) => l.primaryBackdrop)
+                    .firstOrNull ??
+                '',
+            label: 'Фото турнира (афиша)',
+          ),
+          const SizedBox(height: 10),
           _locationPicker(),
           const SizedBox(height: 8),
           Wrap(spacing: 12, runSpacing: 12, children: [
@@ -464,17 +536,56 @@ class _TournamentFormState extends State<_TournamentForm> {
         ),
       );
 
-  /// Карта выбора места: границы регионов, водоёмы точками; выбранный —
-  /// красным (цвет турниров). Тап по точке — назначить водоём турниру.
+  Widget _regionRow() {
+    return InputDecorator(
+      decoration: _dec('Регион проведения'),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<RuRegion>(
+          value: _region,
+          isExpanded: true,
+          hint: const Text('Выбери регion…',
+              style: TextStyle(color: Colors.white38)),
+          dropdownColor: _panel,
+          style: const TextStyle(color: Colors.white),
+          items: [
+            for (final r in _regions)
+              DropdownMenuItem(value: r, child: Text(r.nameRu)),
+          ],
+          onChanged: (v) => setState(() {
+            _region = v;
+            // Точку сбрасываем, если она вне нового региона.
+            if (_placed && v != null && !v.contains(_lon, _lat)) {
+              _placed = false;
+            }
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _hintRow() {
+    final where = _region == null
+        ? 'Сначала выбери регион'
+        : (_placed
+            ? 'Точка: ${_lon.toStringAsFixed(2)}°, ${_lat.toStringAsFixed(2)}° · '
+                'рыба как на «${activeLocations().where((l) => l.id == _locId).map((l) => l.name).firstOrNull ?? '—'}»'
+            : 'Кликни внутри «${_region!.nameRu}»');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Text(where,
+          style: const TextStyle(color: _gold, fontSize: 12)),
+    );
+  }
+
+  /// Карта: границы регионов (выбранный подсвечен), водоёмы точками, красная
+  /// точка турнира. Клик/перетаскивание внутри выбранного региона — ставит точку.
   Widget _venueMap() {
     if (_regions.isEmpty || _bounds == null) {
       return const SizedBox(
-          height: 230, child: Center(child: CircularProgressIndicator()));
+          height: 250, child: Center(child: CircularProgressIndicator()));
     }
-    final geo = activeWaterGeo();
-    final locs = activeLocations();
     return Container(
-      height: 230,
+      height: 250,
       decoration: BoxDecoration(
         color: const Color(0xFF0B1016),
         borderRadius: BorderRadius.circular(10),
@@ -486,32 +597,44 @@ class _TournamentFormState extends State<_TournamentForm> {
         final t = RussiaMapTransform.fitRaw(_bounds!, size, paddingFrac: 0.02);
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (d) {
-            String? best;
-            var bestD = 22.0;
-            for (final l in locs) {
-              final g = geo[l.id];
-              if (g == null) continue;
-              final dd = (t.map(g.$1, g.$2) - d.localPosition).distance;
-              if (dd < bestD) {
-                bestD = dd;
-                best = l.id;
-              }
-            }
-            if (best != null) setState(() => _locId = best!);
-          },
+          onTapDown: (d) => _place(t, d.localPosition),
+          onPanStart: (d) => _place(t, d.localPosition, drag: true),
+          onPanUpdate: (d) => _place(t, d.localPosition, drag: true),
           child: CustomPaint(
             size: size,
-            painter: _VenuePickPainter(t, _regions, locs, geo, _locId),
+            painter: _VenuePickPainter(t, _regions, activeLocations(),
+                activeWaterGeo(), _region, _placed ? Offset(_lon, _lat) : null),
           ),
         );
       }),
     );
   }
 
+  void _place(RussiaMapTransform t, Offset pos, {bool drag = false}) {
+    if (_region == null) return;
+    final geo = t.unmap(pos);
+    if (!_region!.contains(geo.$1, geo.$2)) {
+      if (!drag) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(SnackBar(
+              content: Text('Точка вне «${_region!.nameRu}»'),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(milliseconds: 900)));
+      }
+      return;
+    }
+    setState(() {
+      _lon = geo.$1;
+      _lat = geo.$2;
+      _placed = true;
+      _locId = _bindLocation(_lon, _lat);
+    });
+  }
+
   Widget _locationPicker() {
     return InputDecorator(
-      decoration: _dec('Водоём (зачётная сессия)'),
+      decoration: _dec('Рыба и зоны берутся с водоёма'),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _locId,
@@ -579,7 +702,7 @@ class _TourMapPainter extends CustomPainter {
     final tp = TextPainter(textDirection: TextDirection.ltr);
     const red = Color(0xFFE5483B);
     for (final tt in list) {
-      final g = geo[tt.locationId];
+      final g = tt.hasOwnPoint ? (tt.lon, tt.lat) : geo[tt.locationId];
       if (g == null) continue;
       final p = t.map(g.$1, g.$2);
       canvas.drawCircle(p, 6, Paint()..color = red.withValues(alpha: 0.25));
@@ -607,15 +730,17 @@ class _TourMapPainter extends CustomPainter {
   bool shouldRepaint(covariant _TourMapPainter old) => true;
 }
 
-/// Карта выбора места турнира: регионы с границами, водоёмы золотыми точками,
-/// выбранный — крупной красной (цвет турниров) с подписью.
+/// Карта выбора места турнира: границы регионов (выбранный подсвечен),
+/// водоёмы золотыми точками (для ориентира), красная точка турнира.
 class _VenuePickPainter extends CustomPainter {
-  _VenuePickPainter(this.t, this.regions, this.locs, this.geo, this.selectedId);
+  _VenuePickPainter(
+      this.t, this.regions, this.locs, this.geo, this.selected, this.point);
   final RussiaMapTransform t;
   final List<RuRegion> regions;
   final List<FishingLocation> locs;
   final Map<String, (double, double)> geo;
-  final String selectedId;
+  final RuRegion? selected;
+  final Offset? point; // lon/lat выбранной точки
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -638,42 +763,47 @@ class _VenuePickPainter extends CustomPainter {
         }
         path.close();
       }
-      canvas.drawPath(path, Paint()..color = const Color(0xFF16221B));
-      canvas.drawPath(path, border);
+      final isSel = selected != null && r.nameEn == selected!.nameEn;
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = isSel
+                ? const Color(0xFF33251C)
+                : const Color(0xFF16221B));
+      canvas.drawPath(
+          path,
+          isSel
+              ? (Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1.4
+                ..color = const Color(0xFFE5483B))
+              : border);
     }
-    const red = Color(0xFFE5483B);
-    final tp = TextPainter(textDirection: TextDirection.ltr);
+    // Водоёмы — маленькие золотые точки (ориентир).
     for (final l in locs) {
       final g = geo[l.id];
       if (g == null) continue;
       final p = t.map(g.$1, g.$2);
-      final sel = l.id == selectedId;
-      if (sel) {
-        canvas.drawCircle(p, 9, Paint()..color = red.withValues(alpha: 0.3));
-        canvas.drawCircle(p, 4.4, Paint()..color = red);
-        canvas.drawCircle(
-            p,
-            4.4,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1.4
-              ..color = Colors.black);
-      } else {
-        canvas.drawCircle(p, 2.6, Paint()..color = _gold);
-      }
-      tp.text = TextSpan(
-          text: l.name,
-          style: TextStyle(
-              color: sel ? Colors.white : Colors.white60,
-              fontSize: sel ? 9.5 : 8,
-              fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
-              shadows: const [Shadow(color: Colors.black, blurRadius: 3)]));
-      tp.layout();
-      tp.paint(canvas, Offset(p.dx - tp.width / 2, p.dy + (sel ? 7 : 4)));
+      canvas.drawCircle(
+          p, 2.2, Paint()..color = _gold.withValues(alpha: 0.7));
+    }
+    // Точка турнира — крупная красная.
+    if (point != null) {
+      final p = t.map(point!.dx, point!.dy);
+      const red = Color(0xFFE5483B);
+      canvas.drawCircle(p, 9, Paint()..color = red.withValues(alpha: 0.3));
+      canvas.drawCircle(p, 5, Paint()..color = red);
+      canvas.drawCircle(
+          p,
+          5,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.6
+            ..color = Colors.white);
     }
   }
 
   @override
   bool shouldRepaint(covariant _VenuePickPainter old) =>
-      old.selectedId != selectedId;
+      old.selected?.nameEn != selected?.nameEn || old.point != point;
 }

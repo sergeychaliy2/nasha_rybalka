@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/providers.dart';
 import '../../shared/sound_service.dart';
@@ -398,40 +399,43 @@ class SettingsWindowBody extends ConsumerStatefulWidget {
 class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
   late bool _sound;
   late bool _vibration;
+  late double _volume;
 
   @override
   void initState() {
     super.initState();
     final prefs = ref.read(sharedPreferencesProvider);
-    _sound = prefs.getBool('settings.sound') ?? true;
+    _sound = SoundService.enabled;
+    _volume = SoundService.volume;
     _vibration = prefs.getBool('settings.vibration') ?? true;
-  }
-
-  void _save() {
-    final prefs = ref.read(sharedPreferencesProvider);
-    prefs.setBool('settings.sound', _sound);
-    prefs.setBool('settings.vibration', _vibration);
-    SoundService.enabled = _sound; // применяем сразу, без перезапуска
   }
 
   @override
   Widget build(BuildContext context) {
+    final prefs = ref.read(sharedPreferencesProvider);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
-        child: HeaderPanel(
+        child: SingleChildScrollView(
+          child: HeaderPanel(
           header: 'Настройки',
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _toggleRow('Звук', _sound, (v) {
                 setState(() => _sound = v);
-                _save();
+                SoundService.setEnabled(prefs, v);
               }),
+              if (_sound) ...[
+                const SizedBox(height: 10),
+                _volumeRow(prefs),
+                const SizedBox(height: 10),
+                _sfxSection(prefs),
+              ],
               const SizedBox(height: 10),
               _toggleRow('Вибрация', _vibration, (v) {
                 setState(() => _vibration = v);
-                _save();
+                prefs.setBool('settings.vibration', v);
               }),
               const SizedBox(height: 10),
               Container(
@@ -467,6 +471,77 @@ class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
             ],
           ),
         ),
+        ),
+      ),
+    );
+  }
+
+  Widget _volumeRow(SharedPreferences prefs) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(children: [
+        const Icon(Icons.volume_up, color: Colors.white54, size: 20),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Slider(
+            value: _volume,
+            activeColor: kGold,
+            label: '${(_volume * 100).round()}%',
+            divisions: 20,
+            onChanged: (v) {
+              setState(() => _volume = v);
+              SoundService.setVolume(prefs, v);
+            },
+            onChangeEnd: (_) => SoundService.splash(), // проба громкости
+          ),
+        ),
+        SizedBox(
+          width: 40,
+          child: Text('${(_volume * 100).round()}%',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                  color: Colors.white70, fontWeight: FontWeight.w700)),
+        ),
+      ]),
+    );
+  }
+
+  Widget _sfxSection(SharedPreferences prefs) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Звуковые эффекты',
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800)),
+          for (final s in Sfx.values)
+            Row(children: [
+              Expanded(
+                child: Text(s.label,
+                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ),
+              Switch(
+                value: SoundService.isEffectOn(s),
+                activeTrackColor: kGold,
+                thumbColor: const WidgetStatePropertyAll(Colors.white),
+                onChanged: (v) {
+                  setState(() => SoundService.setEffect(prefs, s, v));
+                  if (v) SoundService.play(s); // проба
+                },
+              ),
+            ]),
+        ],
       ),
     );
   }

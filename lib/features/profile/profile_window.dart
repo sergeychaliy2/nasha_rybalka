@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../domain/entities/account.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/value_objects/currency.dart';
 import '../daily/daily_dialog.dart';
@@ -56,6 +58,8 @@ class ProfileWindowBody extends ConsumerWidget {
                       _grid(player, caught, record),
                       const SizedBox(height: 10),
                       _premium(player),
+                      const SizedBox(height: 10),
+                      const AccountBlock(),
                       const SizedBox(height: 14),
                       Row(children: [
                         Expanded(
@@ -335,6 +339,213 @@ class ProfileWindowBody extends ConsumerWidget {
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700)),
       ]),
+    );
+  }
+}
+
+/// Блок аккаунта в профиле: кто вошёл, реферальный код (поделиться),
+/// одноразовая активация кода друга (бонус) и выход из аккаунта.
+class AccountBlock extends ConsumerStatefulWidget {
+  const AccountBlock({super.key});
+
+  @override
+  ConsumerState<AccountBlock> createState() => _AccountBlockState();
+}
+
+class _AccountBlockState extends ConsumerState<AccountBlock> {
+  final _code = TextEditingController();
+  bool _busy = false;
+  String? _msg;
+  bool _msgOk = false;
+
+  // Одноразовый реферальный бонус активатору кода.
+  static const _bonusSilver = 800;
+  static const _bonusGold = 15;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _redeem(Account acc) async {
+    final store = ref.read(accountStoreProvider);
+    final code = _code.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() {
+        _msg = 'Введите код друга';
+        _msgOk = false;
+      });
+      return;
+    }
+    if (code == acc.referralCode) {
+      setState(() {
+        _msg = 'Нельзя активировать собственный код';
+        _msgOk = false;
+      });
+      return;
+    }
+    final owner = store.byReferral(code);
+    if (owner == null) {
+      setState(() {
+        _msg = 'Код не найден';
+        _msgOk = false;
+      });
+      return;
+    }
+    setState(() => _busy = true);
+    await store.update(acc.copyWith(redeemedReferral: true, referredBy: owner.id));
+    final player = ref.read(playerControllerProvider.notifier);
+    await player.credit(CurrencyType.silver, _bonusSilver);
+    await player.credit(CurrencyType.gold, _bonusGold);
+    ref.read(currentAccountProvider.notifier).set(store.byId(acc.id));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _msgOk = true;
+      _msg = 'Бонус начислен: +$_bonusSilver серебра, +$_bonusGold золота';
+    });
+  }
+
+  Future<void> _logout() async {
+    await ref.read(accountStoreProvider).signOut();
+    if (!mounted) return;
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    ref.read(currentAccountProvider.notifier).set(null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final acc = ref.watch(currentAccountProvider);
+    if (acc == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.account_circle, color: kGold, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(acc.username,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900)),
+                  Text(acc.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 11.5)),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout, size: 16, color: Color(0xFFE5726A)),
+              label: const Text('Выйти',
+                  style: TextStyle(color: Color(0xFFE5726A), fontSize: 12.5)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          // Реферальный код — поделиться с другом.
+          InkWell(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: acc.referralCode));
+              ScaffoldMessenger.of(context)
+                ..clearSnackBars()
+                ..showSnackBar(const SnackBar(
+                    content: Text('Реферальный код скопирован'),
+                    behavior: SnackBarBehavior.floating));
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: kGold.withValues(alpha: 0.4)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.card_giftcard, color: kGold, size: 18),
+                const SizedBox(width: 8),
+                const Text('Ваш код:',
+                    style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                const SizedBox(width: 6),
+                Text(acc.referralCode,
+                    style: const TextStyle(
+                        color: kGold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2)),
+                const Spacer(),
+                const Icon(Icons.copy, color: Colors.white38, size: 16),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Активация кода друга — один раз.
+          if (acc.redeemedReferral)
+            Row(children: [
+              const Icon(Icons.verified, color: Color(0xFF6FBF73), size: 16),
+              const SizedBox(width: 6),
+              Text('Реферальный бонус уже получен',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12)),
+            ])
+          else ...[
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _code,
+                  textCapitalization: TextCapitalization.characters,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'Код друга',
+                    hintStyle: const TextStyle(color: Colors.white30),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.14))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: kGold)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: kGold),
+                onPressed: _busy ? null : () => _redeem(acc),
+                child: const Text('Активировать',
+                    style: TextStyle(color: kTextDark, fontSize: 12.5)),
+              ),
+            ]),
+          ],
+          if (_msg != null) ...[
+            const SizedBox(height: 6),
+            Text(_msg!,
+                style: TextStyle(
+                    color: _msgOk ? const Color(0xFF6FBF73) : const Color(0xFFE5726A),
+                    fontSize: 12)),
+          ],
+        ],
+      ),
     );
   }
 }

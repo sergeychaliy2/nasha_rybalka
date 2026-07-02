@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/account_store.dart';
 import '../data/repositories/local_player_repository.dart';
 import '../data/repositories/seed_content_repository.dart';
+import '../domain/entities/account.dart';
 import '../domain/entities/fish_species.dart';
 import '../domain/entities/fishing_location.dart';
 import '../domain/entities/gear.dart';
@@ -33,6 +35,22 @@ final contentRepositoryProvider =
 final playerRepositoryProvider = Provider<PlayerRepository>(
   (ref) => LocalPlayerRepository(ref.watch(sharedPreferencesProvider)),
 );
+
+/// Локальное хранилище аккаунтов (вход/регистрация/реферал).
+final accountStoreProvider =
+    Provider<AccountStore>((ref) => AccountStore(ref.watch(sharedPreferencesProvider)));
+
+/// Текущий вошедший аккаунт (обновляется при входе/выходе/реферале).
+class CurrentAccount extends Notifier<Account?> {
+  @override
+  Account? build() => ref.read(accountStoreProvider).current;
+
+  /// Установить активный аккаунт (вход/реферал) или null (выход).
+  void set(Account? account) => state = account;
+}
+
+final currentAccountProvider =
+    NotifierProvider<CurrentAccount, Account?>(CurrentAccount.new);
 
 // --- Доменные сервисы (чистая логика) ------------------------------------
 

@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../menu/main_menu_screen.dart';
+import '../auth/root_gate.dart';
 import '../shell/ui_kit.dart';
 
 /// Загрузочный экран в стиле игры: тёмная вода, поплавок с расходящимися
@@ -39,7 +39,7 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 450),
-        pageBuilder: (_, _, _) => const MainMenuScreen(),
+        pageBuilder: (_, _, _) => const RootGate(),
         transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
       ),

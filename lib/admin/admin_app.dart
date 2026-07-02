@@ -4,7 +4,10 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../data/account_store.dart';
 import '../data/content_overrides.dart';
+import 'accounts_editor.dart';
+import 'audio_editor.dart';
 import 'gear_editor.dart';
 import 'locations_editor.dart';
 import 'species_editor.dart';
@@ -20,8 +23,9 @@ const _panel = Color(0xFF161C23);
 /// Админ-приложение: редактор всего контента игры поверх сид-дефолтов
 /// (правки хранятся в общих SharedPreferences → игра видит после перезапуска).
 class AdminApp extends StatelessWidget {
-  const AdminApp({super.key, required this.overrides});
+  const AdminApp({super.key, required this.overrides, required this.accounts});
   final ContentOverrides overrides;
+  final AccountStore accounts;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +42,7 @@ class AdminApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
       ),
-      home: AdminHome(overrides: overrides),
+      home: AdminHome(overrides: overrides, accounts: accounts),
     );
   }
 }
@@ -50,12 +54,14 @@ class _Section {
   final String subtitle;
   final IconData icon;
   final Color color;
-  final Widget Function(ContentOverrides)? builder; // null — «в разработке»
+  final Widget Function()? builder; // null — «в разработке»
 }
 
 class AdminHome extends StatefulWidget {
-  const AdminHome({super.key, required this.overrides});
+  const AdminHome(
+      {super.key, required this.overrides, required this.accounts});
   final ContentOverrides overrides;
+  final AccountStore accounts;
 
   @override
   State<AdminHome> createState() => _AdminHomeState();
@@ -112,49 +118,63 @@ class _AdminHomeState extends State<AdminHome> {
         'Создать на карте России, описание, фон, глубина, зарыбление',
         Icons.add_location_alt,
         const Color(0xFF6FBF73),
-        builder: (o) => LocationsEditor(overrides: o),
+        builder: () => LocationsEditor(overrides: overrides),
       ),
       _Section(
         'Зоны заброса',
         'Кисть по фону локации: где вода, а где нельзя забрасывать',
         Icons.brush,
         const Color(0xFF56C271),
-        builder: (o) => ZoneEditor(overrides: o),
+        builder: () => ZoneEditor(overrides: overrides),
       ),
       _Section(
         'Турниры',
-        'Создать/править/удалить: водоём, взносы, призы, уровень, боты',
+        'Регион, точка на карте, фото, взносы, призы, уровень, боты',
         Icons.emoji_events,
         const Color(0xFFE0864A),
-        builder: (o) => TournamentsEditor(overrides: o),
+        builder: () => TournamentsEditor(overrides: overrides),
       ),
       _Section(
         'Рыбы и шансы',
         'Каталог видов: вес, редкость, семейство, профиль шансов клёва',
         Icons.set_meal,
         const Color(0xFF5AA9E6),
-        builder: (o) => SpeciesEditor(overrides: o),
+        builder: () => SpeciesEditor(overrides: overrides),
       ),
       _Section(
         'Магазин и снасти',
         'Все предметы: цены, уровни, классы, характеристики, эхолоты',
         Icons.storefront,
         const Color(0xFFE0B84C),
-        builder: (o) => GearEditor(overrides: o),
+        builder: () => GearEditor(overrides: overrides),
       ),
       _Section(
         'Продукты и прикормки',
         'Наживки, приманки, прикормки (семейства), спреи, энергия',
         Icons.science,
         const Color(0xFF54C9C9),
-        builder: (o) => GearEditor(overrides: o, consumablesOnly: true),
+        builder: () => GearEditor(overrides: overrides, consumablesOnly: true),
+      ),
+      _Section(
+        'Аккаунты',
+        'Мониторинг, создание, роли, блокировка, сброс пароля, рефералы',
+        Icons.manage_accounts,
+        const Color(0xFF7FB3D5),
+        builder: () => AccountsEditor(store: widget.accounts),
       ),
       _Section(
         'Погода и коэффициенты',
         'Прокачка, энергия, формула клёва, вероятность осадков',
         Icons.tune,
         const Color(0xFFB98CFF),
-        builder: (o) => TuningEditor(overrides: o),
+        builder: () => TuningEditor(overrides: overrides),
+      ),
+      _Section(
+        'Звук по умолчанию',
+        'Громкость и эффекты для новых игроков (можно переопределить)',
+        Icons.graphic_eq,
+        const Color(0xFFD98AC9),
+        builder: () => AudioEditor(overrides: overrides),
       ),
     ];
 
@@ -217,7 +237,7 @@ class _AdminHomeState extends State<AdminHome> {
       borderRadius: BorderRadius.circular(16),
       onTap: active
           ? () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => s.builder!(overrides)))
+              builder: (_) => s.builder!()))
           : null,
       child: Opacity(
         opacity: active ? 1 : 0.5,

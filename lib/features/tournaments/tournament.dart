@@ -21,6 +21,9 @@ class Tournament {
     required this.goldReward,
     required this.backdrop,
     required this.info,
+    this.regionId = '',
+    this.lon = 0,
+    this.lat = 0,
   });
 
   final String id;
@@ -52,6 +55,17 @@ class Tournament {
   final String backdrop;
   final String info;
 
+  /// Регион проведения (id = англ. название субъекта РФ). Пусто у сид-турниров
+  /// (тогда точка на карте берётся из геопозиции водоёма `locationId`).
+  final String regionId;
+
+  /// Своя точка турнира на карте (в пределах региона). 0,0 — не задана
+  /// (используется геопозиция водоёма).
+  final double lon;
+  final double lat;
+
+  bool get hasOwnPoint => lon != 0 || lat != 0;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'stageCount': stageCount,
@@ -70,9 +84,13 @@ class Tournament {
         'goldReward': goldReward,
         'backdrop': backdrop,
         'info': info,
+        'regionId': regionId,
+        'lon': lon,
+        'lat': lat,
       };
 
   static int _i(Object? v, int d) => v is num ? v.toInt() : d;
+  static double _d(Object? v, double d) => v is num ? v.toDouble() : d;
 
   factory Tournament.fromJson(Map<String, dynamic> j) => Tournament(
         id: (j['id'] ?? '') as String,
@@ -92,6 +110,9 @@ class Tournament {
         goldReward: _i(j['goldReward'], 0),
         backdrop: (j['backdrop'] ?? '') as String,
         info: (j['info'] ?? '') as String,
+        regionId: (j['regionId'] ?? '') as String,
+        lon: _d(j['lon'], 0),
+        lat: _d(j['lat'], 0),
       );
 
   Tournament copyWith({
@@ -112,6 +133,9 @@ class Tournament {
     int? goldReward,
     String? backdrop,
     String? info,
+    String? regionId,
+    double? lon,
+    double? lat,
   }) =>
       Tournament(
         id: id ?? this.id,
@@ -131,6 +155,9 @@ class Tournament {
         goldReward: goldReward ?? this.goldReward,
         backdrop: backdrop ?? this.backdrop,
         info: info ?? this.info,
+        regionId: regionId ?? this.regionId,
+        lon: lon ?? this.lon,
+        lat: lat ?? this.lat,
       );
 }
 

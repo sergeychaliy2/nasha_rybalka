@@ -39,6 +39,14 @@ String gearRarityRu(GearRarity r) => switch (r) {
       GearRarity.legendary => 'Турнирный',
     };
 
+Color gearRarityColor(GearRarity r) => switch (r) {
+      GearRarity.common => const Color(0xFF9AA4AD),
+      GearRarity.uncommon => const Color(0xFF6FBF73),
+      GearRarity.rare => const Color(0xFF5AA9E6),
+      GearRarity.epic => const Color(0xFFB98CFF),
+      GearRarity.legendary => _gold,
+    };
+
 const _consumables = [
   GearCategory.bait,
   GearCategory.lure,
@@ -221,7 +229,12 @@ class _GearEditorState extends State<GearEditor> {
       decoration: BoxDecoration(
         color: _panel,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border(
+          left: BorderSide(color: gearRarityColor(g.rarity), width: 3),
+          top: BorderSide(color: Colors.white10),
+          right: BorderSide(color: Colors.white10),
+          bottom: BorderSide(color: Colors.white10),
+        ),
       ),
       child: InkWell(
         onTap: () => _openForm(g),

@@ -11,11 +11,12 @@ import 'shared/sound_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  // Правки контента из админки (зоны заброса и пр.) — до старта UI.
+  // Правки контента из админки (зоны заброса, аудио-дефолты и пр.) — до UI.
   ContentOverrides(prefs)
     ..load()
     ..applyToGame();
-  SoundService.enabled = prefs.getBool('settings.sound') ?? true;
+  // Аудио: сперва админ-дефолты (внутри applyToGame), затем настройки игрока.
+  SoundService.loadFromPrefs(prefs);
 
   runApp(
     ProviderScope(
