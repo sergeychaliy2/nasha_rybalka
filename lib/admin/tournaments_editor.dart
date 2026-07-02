@@ -543,7 +543,9 @@ class _TournamentFormState extends State<_TournamentForm> {
         child: DropdownButton<RuRegion>(
           value: _region,
           isExpanded: true,
-          hint: const Text('Выбери регion…',
+          // Компактное скролл-меню, чтобы не перекрывать карту/приложение.
+          menuMaxHeight: 320,
+          hint: const Text('Выбери регион…',
               style: TextStyle(color: Colors.white38)),
           dropdownColor: _panel,
           style: const TextStyle(color: Colors.white),

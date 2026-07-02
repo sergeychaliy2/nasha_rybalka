@@ -391,6 +391,8 @@ class _LocFormState extends State<_LocForm> {
         child: DropdownButton<RuRegion>(
           value: _region,
           isExpanded: true,
+          // Компактное скролл-меню, чтобы не перекрывать карту/приложение.
+          menuMaxHeight: 320,
           hint: const Text('— выбери регион —',
               style: TextStyle(color: Colors.white38)),
           dropdownColor: _panel,
