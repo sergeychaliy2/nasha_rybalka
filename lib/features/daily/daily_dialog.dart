@@ -44,8 +44,11 @@ class _DailyDialogState extends ConsumerState<_DailyDialog> {
     final currentIndex = (player.dailyNextStreak - 1) % 7; // 0..6
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 470),
-      child: HeaderPanel(
+      constraints: BoxConstraints(
+          maxWidth: 470,
+          maxHeight: MediaQuery.of(context).size.height * 0.92),
+      child: SingleChildScrollView(
+        child: HeaderPanel(
         header: 'Ежедневная награда',
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -103,6 +106,7 @@ class _DailyDialogState extends ConsumerState<_DailyDialog> {
             ]),
           ],
         ),
+      ),
       ),
     );
   }

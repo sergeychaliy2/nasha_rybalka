@@ -371,12 +371,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen>
     return Positioned(
       right: 12,
       top: 12,
-      child: Column(children: [
-        btn(Icons.add, () => _animateZoom(1.6, _viewport.center(Offset.zero))),
-        btn(Icons.remove,
-            () => _animateZoom(1 / 1.6, _viewport.center(Offset.zero))),
-        btn(Icons.center_focus_strong, _animateReset),
-      ]),
+      child: SafeArea(
+        child: Column(children: [
+          btn(Icons.add,
+              () => _animateZoom(1.6, _viewport.center(Offset.zero))),
+          btn(Icons.remove,
+              () => _animateZoom(1 / 1.6, _viewport.center(Offset.zero))),
+          btn(Icons.center_focus_strong, _animateReset),
+        ]),
+      ),
     );
   }
 

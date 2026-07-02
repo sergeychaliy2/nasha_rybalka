@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +11,11 @@ import 'shared/sound_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Игра «от первого лица с берега» — горизонтальная. На мобильных фиксируем
+  // ландшафт, чтобы верстка была стабильной под любые разрешения (телефоны/
+  // планшеты). На десктопе вызов безвреден.
+  await SystemChrome.setPreferredOrientations(
+      const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   final prefs = await SharedPreferences.getInstance();
   // Правки контента из админки (зоны заброса, аудио-дефолты и пр.) — до UI.
   ContentOverrides(prefs)
@@ -42,6 +48,17 @@ class NashaRybalkaApp extends StatelessWidget {
       title: 'Наша Рыбалка',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
+      // Ограничиваем системный масштаб шрифта, чтобы крупный шрифт устройства
+      // не ломал верстку на телефонах.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+              textScaler: mq.textScaler
+                  .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.15)),
+          child: child!,
+        );
+      },
       home: const SplashScreen(),
     );
   }

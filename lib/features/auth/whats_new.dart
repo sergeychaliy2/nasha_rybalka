@@ -35,9 +35,14 @@ class _WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
-        child: HeaderPanel(
+        constraints: BoxConstraints(
+            maxWidth: 440,
+            maxHeight: MediaQuery.of(context).size.height * 0.92),
+        child: SingleChildScrollView(
+          child: HeaderPanel(
           header: 'Что нового · ${entry.version}',
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -86,6 +91,7 @@ class _WhatsNewDialog extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

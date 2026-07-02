@@ -42,6 +42,15 @@ class AdminApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
       ),
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+              textScaler: mq.textScaler
+                  .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.15)),
+          child: child!,
+        );
+      },
       home: AdminHome(overrides: overrides, accounts: accounts),
     );
   }

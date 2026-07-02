@@ -41,15 +41,18 @@ class ProfileWindowBody extends ConsumerWidget {
     final toNext = leveling.gramsToNext(player.totalCaughtGrams);
     final frac = leveling.progressToNext(player.totalCaughtGrams);
 
-    return Center(
-      child: SingleChildScrollView(
+    return LayoutBuilder(builder: (context, c) {
+      return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 900),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SizedBox(
+            height: c.maxHeight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               Expanded(
-                child: HeaderPanel(
+                child: SingleChildScrollView(
+                  child: HeaderPanel(
                   header: 'Ваш профиль',
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -93,14 +96,16 @@ class ProfileWindowBody extends ConsumerWidget {
                     ],
                   ),
                 ),
+                ),
               ),
               const SizedBox(width: 16),
               const SizedBox(width: 360, child: SettingsWindowBody()),
             ],
           ),
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   /// Карточка персонажа: аватар-рыбак в кольце уровня + звание + полоса опыта.
