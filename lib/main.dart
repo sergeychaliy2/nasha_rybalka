@@ -16,6 +16,10 @@ Future<void> main() async {
   // планшеты). На десктопе вызов безвреден.
   await SystemChrome.setPreferredOrientations(
       const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  // Полноэкранный режим: прячем системную строку состояния и навигацию, чтобы
+  // игра занимала весь экран (иначе сверху пустая полоса статус-бара, а контент
+  // опущен вниз). Панели возвращаются по свайпу от края.
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   final prefs = await SharedPreferences.getInstance();
   // Правки контента из админки (зоны заброса, аудио-дефолты и пр.) — до UI.
   ContentOverrides(prefs)
