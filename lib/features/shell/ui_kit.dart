@@ -8,6 +8,7 @@ import '../../domain/entities/gear.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/value_objects/currency.dart';
 import '../skills/skills_screen.dart';
+import 'responsive.dart';
 
 /// Общий визуальный язык по видео-рефу: фотофоны, круглые кнопки с золотым
 /// ободом, серые панели с тёмными шапками, золотые CTA, верхний пилл
@@ -98,8 +99,12 @@ class StatusPill extends ConsumerWidget {
     final toNext = (hi - total).clamp(0, 1 << 31);
 
     return SizedBox(
-      height: 46,
-      child: Stack(
+      height: context.compact ? 32 : 46,
+      child: FittedBox(
+        fit: BoxFit.fitHeight,
+        child: SizedBox(
+          height: 46,
+          child: Stack(
         alignment: Alignment.center,
         children: [
           Row(
@@ -167,6 +172,8 @@ class StatusPill extends ConsumerWidget {
             child: _levelRing(level, progress),
           ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -751,7 +758,9 @@ class GameWindow extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                padding: context.compact
+                    ? const EdgeInsets.fromLTRB(8, 4, 8, 2)
+                    : const EdgeInsets.fromLTRB(12, 8, 12, 4),
                 child: Row(
                   children: [
                     _closeButton(context),
@@ -764,7 +773,9 @@ class GameWindow extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  padding: context.compact
+                      ? const EdgeInsets.fromLTRB(10, 2, 10, 8)
+                      : const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: child,
                 ),
               ),
@@ -776,43 +787,49 @@ class GameWindow extends StatelessWidget {
   }
 
   Widget _closeButton(BuildContext context) {
+    final d = context.compact ? 30.0 : 38.0;
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(),
       child: Container(
-        width: 38,
-        height: 38,
+        width: d,
+        height: d,
         decoration: BoxDecoration(
           color: const Color(0xFF15181C),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
         ),
-        child: const Icon(Icons.close, color: Colors.white, size: 20),
+        child: Icon(Icons.close,
+            color: Colors.white, size: context.compact ? 17 : 20),
       ),
     );
   }
 
   Widget _titlePill() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [kGoldLight, kGold],
+    return Builder(builder: (context) {
+      final c = context.compact;
+      return Container(
+        padding: EdgeInsets.symmetric(
+            horizontal: c ? 10 : 16, vertical: c ? 5 : 8),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [kGoldLight, kGold],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 6)],
         ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 6)],
-      ),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: kTextDark,
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.6,
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            color: kTextDark,
+            fontSize: c ? 11 : 13,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.6,
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

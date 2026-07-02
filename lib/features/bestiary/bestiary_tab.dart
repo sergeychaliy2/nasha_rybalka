@@ -7,6 +7,7 @@ import '../../domain/value_objects/fishing_enums.dart';
 import '../../domain/value_objects/weight.dart';
 import '../../shared/content_images.dart';
 import '../../shared/rendering/fish_icons.dart';
+import '../shell/responsive.dart';
 import '../shell/ui_kit.dart';
 import 'fish_meta.dart';
 
@@ -83,11 +84,11 @@ class _BestiaryTabState extends ConsumerState<BestiaryTab> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: shown.length,
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 286,
-                mainAxisExtent: 384,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: context.compact ? 200 : 286,
+                mainAxisExtent: context.compact ? 276 : 384,
+                crossAxisSpacing: context.compact ? 8 : 14,
+                mainAxisSpacing: context.compact ? 8 : 14,
               ),
               itemBuilder: (context, i) {
                 final sp = shown[i];

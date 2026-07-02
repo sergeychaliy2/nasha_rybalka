@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../shell/responsive.dart';
 import '../shell/ui_kit.dart';
 
 /// Открывает окно ежедневной награды (лесенка 7 дней).
@@ -62,8 +63,8 @@ class _DailyDialogState extends ConsumerState<_DailyDialog> {
             ),
             const SizedBox(height: 16),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: context.compact ? 5 : 8,
+              runSpacing: context.compact ? 5 : 8,
               alignment: WrapAlignment.center,
               children: [
                 for (var i = 0; i < 7; i++)
@@ -129,14 +130,15 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.compact;
     final border = isToday
         ? kGold
         : claimed
             ? kGold.withValues(alpha: 0.35)
             : Colors.white12;
     return Container(
-      width: 58,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      width: c ? 46 : 58,
+      padding: EdgeInsets.symmetric(vertical: c ? 6 : 8, horizontal: c ? 3 : 4),
       decoration: BoxDecoration(
         color: isToday
             ? kGold.withValues(alpha: 0.16)
@@ -148,28 +150,26 @@ class _DayCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('День $day',
-              style: const TextStyle(color: Colors.white60, fontSize: 10)),
-          const SizedBox(height: 6),
+              style: TextStyle(color: Colors.white60, fontSize: c ? 8.5 : 10)),
+          SizedBox(height: c ? 4 : 6),
           Icon(
             claimed ? Icons.check_circle : Icons.card_giftcard,
-            color: claimed
-                ? kGold
-                : (isToday ? kGold : Colors.white38),
-            size: 22,
+            color: claimed ? kGold : (isToday ? kGold : Colors.white38),
+            size: c ? 17 : 22,
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: c ? 4 : 6),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.circle, size: 8, color: kSilver),
+            Icon(Icons.circle, size: c ? 7 : 8, color: kSilver),
             const SizedBox(width: 3),
             Text('$silver',
-                style: const TextStyle(color: Colors.white, fontSize: 11)),
+                style: TextStyle(color: Colors.white, fontSize: c ? 10 : 11)),
           ]),
           if (gold > 0)
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.circle, size: 8, color: kGold),
+              Icon(Icons.circle, size: c ? 7 : 8, color: kGold),
               const SizedBox(width: 3),
               Text('$gold',
-                  style: const TextStyle(color: kGold, fontSize: 11)),
+                  style: TextStyle(color: kGold, fontSize: c ? 10 : 11)),
             ]),
         ],
       ),

@@ -8,6 +8,7 @@ import '../../domain/value_objects/currency.dart';
 import '../../domain/value_objects/fishing_enums.dart';
 import '../../shared/content_images.dart';
 import '../../shared/rendering/gear_icons.dart';
+import '../shell/responsive.dart';
 import '../shell/ui_kit.dart';
 import 'gear_detail.dart';
 import 'gear_stats.dart';
@@ -49,19 +50,20 @@ class _ShopTabState extends ConsumerState<ShopTab> {
         final items =
             catalog.where((g) => g.category == _category).toList();
 
+        final compact = context.compact;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Сайдбар категорий (иконка + подпись).
             SizedBox(
-              width: 92,
+              width: compact ? 66 : 92,
               child: ListView(
                 children: [
                   for (final c in categories) _catTile(c, _categoryLabel(c)),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: compact ? 8 : 12),
             // Товары выбранной категории.
             Expanded(
               child: Column(
@@ -73,12 +75,11 @@ class _ShopTabState extends ConsumerState<ShopTab> {
                   ),
                   Expanded(
                     child: GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 236,
-                        mainAxisExtent: 304,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: compact ? 168 : 236,
+                        mainAxisExtent: compact ? 214 : 304,
+                        crossAxisSpacing: compact ? 8 : 14,
+                        mainAxisSpacing: compact ? 8 : 14,
                       ),
                       itemCount: items.length,
                       itemBuilder: (context, i) =>
