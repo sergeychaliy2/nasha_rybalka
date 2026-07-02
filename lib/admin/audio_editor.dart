@@ -1,5 +1,6 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../shared/content_audio.dart';
 import '../shared/sound_service.dart';
@@ -7,11 +8,12 @@ import '../shared/sound_service.dart';
 const _gold = Color(0xFFE4B857);
 const _panel = Color(0xFF161C23);
 
-/// Замена аудиофайлов игры: музыка меню и звуковые эффекты. Громкость и
-/// включение игрок настраивает у себя (в игре) — здесь только сами файлы.
-/// Загруженный файл кладётся в общую папку и читается игрой напрямую.
+/// Замена аудиофайлов игры (музыка меню и эффекты) + просмотр ТЕКУЩИХ настроек
+/// звука игрока на этом устройстве (громкость/вкл — только чтение, их меняет
+/// игрок в игре). Загруженный файл кладётся в общую папку и читается игрой.
 class AudioEditor extends StatefulWidget {
-  const AudioEditor({super.key});
+  const AudioEditor({super.key, required this.prefs});
+  final SharedPreferences prefs;
 
   @override
   State<AudioEditor> createState() => _AudioEditorState();
@@ -74,6 +76,8 @@ class _AudioEditorState extends State<AudioEditor> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _currentSettings(),
+          const SizedBox(height: 14),
           Text(
               'Замена файлов музыки и эффектов. Форматы: WAV, MP3, OGG, M4A. '
               'Громкость и включение звука игрок настраивает в самой игре.',
@@ -81,6 +85,72 @@ class _AudioEditorState extends State<AudioEditor> {
                   color: Colors.white.withValues(alpha: 0.55), fontSize: 12.5)),
           const SizedBox(height: 14),
           for (final s in _slots) _row(s),
+        ],
+      ),
+    );
+  }
+
+  /// Текущие настройки звука на этом устройстве (общий стор с игрой) — только
+  /// для просмотра; меняет их игрок в самой игре.
+  Widget _currentSettings() {
+    final p = widget.prefs;
+    final soundOn = p.getBool('settings.sound') ?? true;
+    final vol = ((p.getDouble('settings.soundVolume') ?? 0.9) * 100).round();
+    final musicOn = p.getBool('settings.music') ?? true;
+    final mvol = ((p.getDouble('settings.musicVolume') ?? 0.5) * 100).round();
+    String pct(String key) {
+      final v = p.getDouble('settings.sfxVol.$key');
+      if (v != null) return '${(v * 100).round()}%';
+      final legacy = p.getBool('settings.sfx.$key');
+      return legacy == false ? '0%' : '100%';
+    }
+
+    Widget chip(String label, String value, bool on) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+                color: (on ? _gold : const Color(0xFFE5726A))
+                    .withValues(alpha: 0.4)),
+          ),
+          child: Text('$label: $value',
+              style: TextStyle(
+                  color: on ? Colors.white : Colors.white54, fontSize: 12)),
+        );
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _panel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _gold.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.tune, color: _gold, size: 18),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Текущие настройки звука (на этом устройстве)',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800)),
+            ),
+            IconButton(
+              tooltip: 'Обновить',
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh, color: Colors.white54, size: 18),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            chip('Музыка', musicOn ? '$mvol%' : 'выкл', musicOn),
+            chip('Эффекты (общее)', soundOn ? '$vol%' : 'выкл', soundOn),
+            for (final s in Sfx.values) chip(s.label, pct(s.key), soundOn),
+          ]),
         ],
       ),
     );
@@ -122,7 +192,10 @@ class _AudioEditorState extends State<AudioEditor> {
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w800)),
-              Text(custom ? 'своя запись' : 'встроенная',
+              Text(
+                  custom
+                      ? 'своя запись · ${(contentAudioPath(s.key) ?? '').split('.').last.toUpperCase()}'
+                      : 'встроенная',
                   style: TextStyle(
                       color: custom
                           ? const Color(0xFF56C271)

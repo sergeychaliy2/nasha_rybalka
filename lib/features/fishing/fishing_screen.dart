@@ -21,6 +21,7 @@ import '../../shared/sound_service.dart';
 import '../../shared/rendering/gear_icons.dart';
 import '../../shared/rendering/spring.dart';
 import '../gear/gear_tab.dart';
+import '../menu/main_menu_screen.dart' show SettingsWindowBody;
 import '../map/russia_geo.dart';
 import '../shell/ui_kit.dart';
 import '../tournaments/tournament.dart';
@@ -1170,6 +1171,12 @@ class _FishingScreenState extends ConsumerState<FishingScreen>
                 icon: Icons.info_outline,
                 tooltip: 'О месте',
                 onTap: _locationInfo,
+              ),
+              const SizedBox(height: 12),
+              CircleIconButton(
+                icon: Icons.settings,
+                tooltip: 'Настройки',
+                onTap: () => _openWin('Настройки', const SettingsWindowBody()),
               ),
             ],
           ),

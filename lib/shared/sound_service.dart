@@ -48,11 +48,11 @@ extension SfxMeta on Sfx {
 class SoundService {
   SoundService._();
 
-  // Эффекты.
+  // Эффекты. У каждого — своя громкость 0..1 (0 = выключен).
   static bool enabled = true;
   static double volume = 0.9;
-  static final Map<String, bool> _effectOn = {
-    for (final s in Sfx.values) s.key: true,
+  static final Map<String, double> _effectVol = {
+    for (final s in Sfx.values) s.key: 1.0,
   };
 
   // Музыка меню.
@@ -71,15 +71,24 @@ class SoundService {
     ..setReleaseMode(ReleaseMode.stop);
   static bool _musicPlaying = false;
 
-  static bool isEffectOn(Sfx s) => _effectOn[s.key] ?? true;
+  static double effectVolume(Sfx s) => _effectVol[s.key] ?? 1.0;
+  static bool isEffectOn(Sfx s) => (_effectVol[s.key] ?? 1.0) > 0;
 
   /// Настройки игрока. Ключи prefs: `settings.sound`, `settings.soundVolume`,
-  /// `settings.sfx.<key>`, `settings.music`, `settings.musicVolume`.
+  /// `settings.sfxVol.<key>` (громкость эффекта 0..1), `settings.music`,
+  /// `settings.musicVolume`. Совместимость: старый тумблер `settings.sfx.<key>`
+  /// (false → громкость 0).
   static void loadFromPrefs(SharedPreferences prefs) {
     enabled = prefs.getBool('settings.sound') ?? true;
     volume = prefs.getDouble('settings.soundVolume') ?? 0.9;
     for (final s in Sfx.values) {
-      _effectOn[s.key] = prefs.getBool('settings.sfx.${s.key}') ?? true;
+      final v = prefs.getDouble('settings.sfxVol.${s.key}');
+      if (v != null) {
+        _effectVol[s.key] = v.clamp(0.0, 1.0);
+      } else {
+        final legacy = prefs.getBool('settings.sfx.${s.key}');
+        _effectVol[s.key] = legacy == false ? 0.0 : 1.0;
+      }
     }
     musicEnabled = prefs.getBool('settings.music') ?? true;
     musicVolume = prefs.getDouble('settings.musicVolume') ?? 0.5;
@@ -97,17 +106,18 @@ class SoundService {
     prefs.setDouble('settings.soundVolume', volume);
   }
 
-  static void setEffect(SharedPreferences prefs, Sfx s, bool v) {
-    _effectOn[s.key] = v;
-    prefs.setBool('settings.sfx.${s.key}', v);
+  static void setEffectVolume(SharedPreferences prefs, Sfx s, double v) {
+    _effectVol[s.key] = v.clamp(0.0, 1.0);
+    prefs.setDouble('settings.sfxVol.${s.key}', _effectVol[s.key]!);
   }
 
   static void play(Sfx s) {
-    if (!enabled || volume <= 0 || !(_effectOn[s.key] ?? true)) return;
+    final ev = _effectVol[s.key] ?? 1.0;
+    if (!enabled || volume <= 0 || ev <= 0) return;
     final p = _pool[_next];
     _next = (_next + 1) % _pool.length;
     p
-        .play(audioSource(s.key, s.file), volume: s.baseVolume * volume)
+        .play(audioSource(s.key, s.file), volume: s.baseVolume * volume * ev)
         .catchError((_) {});
   }
 

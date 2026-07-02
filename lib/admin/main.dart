@@ -15,5 +15,6 @@ Future<void> main() async {
   final overrides = ContentOverrides(prefs)
     ..load()
     ..applyToGame();
-  runApp(AdminApp(overrides: overrides, accounts: AccountStore(prefs)));
+  runApp(AdminApp(
+      overrides: overrides, accounts: AccountStore(prefs), prefs: prefs));
 }

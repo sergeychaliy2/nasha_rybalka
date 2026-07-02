@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/account_store.dart';
 import '../data/content_overrides.dart';
@@ -23,9 +24,14 @@ const _panel = Color(0xFF161C23);
 /// Админ-приложение: редактор всего контента игры поверх сид-дефолтов
 /// (правки хранятся в общих SharedPreferences → игра видит после перезапуска).
 class AdminApp extends StatelessWidget {
-  const AdminApp({super.key, required this.overrides, required this.accounts});
+  const AdminApp(
+      {super.key,
+      required this.overrides,
+      required this.accounts,
+      required this.prefs});
   final ContentOverrides overrides;
   final AccountStore accounts;
+  final SharedPreferences prefs;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +48,7 @@ class AdminApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
       ),
-      home: AdminHome(overrides: overrides, accounts: accounts),
+      home: AdminHome(overrides: overrides, accounts: accounts, prefs: prefs),
     );
   }
 }
@@ -59,9 +65,13 @@ class _Section {
 
 class AdminHome extends StatefulWidget {
   const AdminHome(
-      {super.key, required this.overrides, required this.accounts});
+      {super.key,
+      required this.overrides,
+      required this.accounts,
+      required this.prefs});
   final ContentOverrides overrides;
   final AccountStore accounts;
+  final SharedPreferences prefs;
 
   @override
   State<AdminHome> createState() => _AdminHomeState();
@@ -171,10 +181,10 @@ class _AdminHomeState extends State<AdminHome> {
       ),
       _Section(
         'Аудио игры',
-        'Заменить файлы музыки меню и звуковых эффектов',
+        'Заменить файлы музыки/эффектов и видеть текущие настройки звука',
         Icons.graphic_eq,
         const Color(0xFFD98AC9),
-        builder: () => const AudioEditor(),
+        builder: () => AudioEditor(prefs: widget.prefs),
       ),
     ];
 

@@ -9,6 +9,7 @@ import '../domain/value_objects/weight.dart';
 import '../features/shop/gear_detail.dart' show capabilityInfo;
 import '../shared/content_images.dart';
 import '../shared/rendering/gear_icons.dart';
+import 'admin_widgets.dart';
 import 'image_picker.dart';
 
 const _gold = Color(0xFFE4B857);
@@ -518,30 +519,45 @@ class _GearFormState extends State<_GearForm> {
 
   List<Widget> _specific(List<String> groups) {
     if (_isRod) {
-      return [_num(_maxKg, 'Тест (нагрузка), кг')];
+      return [
+        _num(_maxKg, 'Тест (нагрузка), кг',
+            info: 'Комфортная масса рыбы. Сверх неё прочность удилища падает '
+                'быстрее — крупная рыба может порвать снасть.')
+      ];
     }
     if (_isReel) {
       return [
         Wrap(spacing: 12, runSpacing: 12, children: [
-          _num(_maxKg, 'Нагрузка, кг'),
-          _num(_smooth, 'Мягкость, %'),
+          _num(_maxKg, 'Нагрузка, кг',
+              info: 'Какую массу катушка тянет комфортно.'),
+          _num(_smooth, 'Мягкость, %',
+              info: 'Плавность вываживания: выше — полоса QTE идёт мягче, '
+                  'рыбу удерживать легче.'),
         ])
       ];
     }
     if (_isLine) {
       return [
         Wrap(spacing: 12, runSpacing: 12, children: [
-          _num(_maxKg, 'Разрывная, кг'),
-          _num(_length, 'Длина, м'),
+          _num(_maxKg, 'Разрывная, кг',
+              info: 'Максимальная нагрузка до обрыва лески/шнура.'),
+          _num(_length, 'Длина, м',
+              info: 'Запас лески. Влияет на дальний заброс и вываживание.'),
         ])
       ];
     }
     if (_cat == GearCategory.hook) {
-      return [_num(_escape, 'Шанс схода, %')];
+      return [
+        _num(_escape, 'Шанс схода, %',
+            info: 'Вероятность, что рыба сойдёт с крючка (без обрыва). Меньше — '
+                'надёжнее засечка.')
+      ];
     }
     if (_cat == GearCategory.echoSounder) {
       return [
-        _num(_range, 'Луч (глубина), м'),
+        _num(_range, 'Луч (глубина), м',
+            info: 'Насколько глубоко «видит» эхолот — глубже луч, больше рыбы '
+                'и структуры дна видно.'),
         const SizedBox(height: 10),
         const Text('Возможности',
             style: TextStyle(
@@ -568,8 +584,11 @@ class _GearFormState extends State<_GearForm> {
     if (_cat == GearCategory.premium) {
       return [
         Wrap(spacing: 12, runSpacing: 12, children: [
-          _num(_days, 'Дней действия'),
-          _num(_tier, 'Уровень (1–3)'),
+          _num(_days, 'Дней действия',
+              info: 'На сколько дней активируется премиум при покупке.'),
+          _num(_tier, 'Уровень (1–3)',
+              info: '1 — ×2 серебро/опыт; 2 — плюс активнее клёв (+15%); '
+                  '3 — плюс наживка тратится вдвое реже.'),
         ])
       ];
     }
@@ -594,7 +613,9 @@ class _GearFormState extends State<_GearForm> {
             LureColor.values,
             (v) => setState(() => _lureColor = v),
             (v) => v == LureColor.bright ? 'Яркий' : 'Натуральный'),
-        if (_cat == GearCategory.groundbait) _num(_chum, 'Действие, сек'),
+        if (_cat == GearCategory.groundbait)
+          _num(_chum, 'Действие, сек',
+              info: 'Сколько секунд действует прикормка на точке после заброса.'),
       ]),
       if (_cat == GearCategory.groundbait) ...[
         const SizedBox(height: 12),
@@ -657,19 +678,21 @@ class _GearFormState extends State<_GearForm> {
         ),
       );
 
-  Widget _num(TextEditingController c, String label) => SizedBox(
-        width: 180,
+  Widget _num(TextEditingController c, String label, {String info = ''}) =>
+      SizedBox(
+        width: 184,
         child: TextField(
           controller: c,
           keyboardType: TextInputType.number,
           style: const TextStyle(color: Colors.white),
-          decoration: _dec(label),
+          decoration: _dec(label, info: info),
         ),
       );
 
-  InputDecoration _dec(String label) => InputDecoration(
+  InputDecoration _dec(String label, {String info = ''}) => InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+        suffixIcon: info.isEmpty ? null : InfoDot(info),
         filled: true,
         fillColor: Colors.black.withValues(alpha: 0.25),
         border: OutlineInputBorder(

@@ -7,6 +7,7 @@ import '../domain/value_objects/fishing_enums.dart';
 import '../domain/value_objects/weight.dart';
 import '../shared/content_images.dart';
 import '../shared/rendering/fish_icons.dart';
+import 'admin_widgets.dart';
 import 'image_picker.dart';
 
 const _gold = Color(0xFFE4B857);
@@ -528,9 +529,16 @@ class _SpeciesFormState extends State<_SpeciesForm> {
             _num(_xp, 'Опыт за шт.'),
           ]),
           const SizedBox(height: 16),
-          const Text('Шансы клёва (в %, влияют на алгоритм поклёвки)',
-              style: TextStyle(
-                  color: _gold, fontSize: 14, fontWeight: FontWeight.w900)),
+          Row(children: [
+            const Text('Шансы клёва (в %, влияют на алгоритм поклёвки)',
+                style: TextStyle(
+                    color: _gold, fontSize: 14, fontWeight: FontWeight.w900)),
+            const SizedBox(width: 8),
+            const InfoDot(
+                'Насколько охотно вид клюёт при разных условиях. Внутри каждой '
+                'группы проценты сравниваются между собой (это веса, не сумма '
+                '100%). Выше значение — при этом условии клюёт лучше.'),
+          ]),
           const SizedBox(height: 6),
           _pctSection('Наживки и приманки', {
             for (final l in LureType.all) l.label: _lure[l.code]!,

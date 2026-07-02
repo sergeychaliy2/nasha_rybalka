@@ -573,25 +573,36 @@ class _SettingsWindowBodyState extends ConsumerState<SettingsWindowBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Звуковые эффекты',
+          Text('Громкость эффектов (0 — выключить)',
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.6),
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800)),
           for (final s in Sfx.values)
             Row(children: [
-              Expanded(
+              SizedBox(
+                width: 108,
                 child: Text(s.label,
-                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5)),
               ),
-              Switch(
-                value: SoundService.isEffectOn(s),
-                activeTrackColor: kGold,
-                thumbColor: const WidgetStatePropertyAll(Colors.white),
-                onChanged: (v) {
-                  setState(() => SoundService.setEffect(prefs, s, v));
-                  if (v) SoundService.play(s); // проба
-                },
+              Expanded(
+                child: Slider(
+                  value: SoundService.effectVolume(s),
+                  activeColor: kGold,
+                  divisions: 10,
+                  label: '${(SoundService.effectVolume(s) * 100).round()}%',
+                  onChanged: (v) =>
+                      setState(() => SoundService.setEffectVolume(prefs, s, v)),
+                  onChangeEnd: (v) {
+                    if (v > 0) SoundService.play(s); // проба
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 34,
+                child: Text('${(SoundService.effectVolume(s) * 100).round()}%',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
               ),
             ]),
         ],

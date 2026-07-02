@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/content_overrides.dart';
 import '../domain/services/tuning.dart';
+import 'admin_widgets.dart';
 
 const _gold = Color(0xFFE4B857);
 const _panel = Color(0xFF161C23);
@@ -142,25 +143,67 @@ class _TuningEditorState extends State<TuningEditor> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _section('Прокачка', 'Кривая уровней: требуется base·(уровень−1)^exp',
-              [
-                _num('levelBase', 'База, грамм'),
-                _num('levelExponent', 'Экспонента'),
-              ]),
-          _section('Энергия', 'Лимит, восстановление и расход на заброс', [
-            _num('maxEnergy', 'Максимум'),
-            _num('energyRegenSeconds', '+1 каждые, сек'),
-            _num('energyPerCast', 'Расход на заброс'),
-          ]),
-          _section('Клёв', 'Бонусы и множители по редкости вида', [
-            _num('chumBoost', 'Бонус прикормки, ×'),
-            _num('preRainBiteBonus', 'Перед дождём, ×'),
-            _num('rarityCommon', 'Обычная, ×'),
-            _num('rarityUncommon', 'Необычная, ×'),
-            _num('rarityRare', 'Редкая, ×'),
-            _num('rarityTrophy', 'Трофейная, ×'),
-            _num('rarityLegendary', 'Легендарная, ×'),
-          ]),
+          _section(
+            'Прокачка',
+            'Кривая уровней: требуется base·(уровень−1)^exp',
+            [
+              _num('levelBase', 'База, грамм',
+                  info: 'Сколько грамм суммарного улова нужно для перехода '
+                      'с 1-го на 2-й уровень. Больше — медленнее прокачка.'),
+              _num('levelExponent', 'Экспонента',
+                  info: 'Насколько круче растёт требование с уровнем. '
+                      '1 — линейно; больше — каждый уровень даётся заметно тяжелее.'),
+            ],
+            icon: Icons.trending_up,
+            color: const Color(0xFF7FD4A3),
+            info: 'Определяет, как быстро игрок набирает уровни по общему весу '
+                'пойманной рыбы.',
+          ),
+          _section(
+            'Энергия',
+            'Лимит, восстановление и расход на заброс',
+            [
+              _num('maxEnergy', 'Максимум',
+                  info: 'Предел энергии. Заброс тратит энергию — при 0 ловить '
+                      'нельзя, пока не восстановится.'),
+              _num('energyRegenSeconds', '+1 каждые, сек',
+                  info: 'За сколько секунд реального времени копится 1 единица '
+                      'энергии. Меньше — быстрее восстановление.'),
+              _num('energyPerCast', 'Расход на заброс',
+                  info: 'Сколько единиц энергии тратит один заброс снасти.'),
+            ],
+            icon: Icons.bolt,
+            color: const Color(0xFF8FD14F),
+            info: 'Ограничитель сессий: даёт «отдых». При запуске игры энергия '
+                'восстанавливается до полной.',
+          ),
+          _section(
+            'Клёв',
+            'Бонусы и множители по редкости вида',
+            [
+              _num('chumBoost', 'Бонус прикормки, ×',
+                  info: 'Во сколько раз охотнее клюют виды семейства активной '
+                      'прикормки, пока она действует.'),
+              _num('preRainBiteBonus', 'Перед дождём, ×',
+                  info: 'Множитель шанса клёва в окне, пока дождь надвигается, '
+                      'но ещё не начался (народная примета).'),
+              _num('rarityCommon', 'Обычная, ×',
+                  info: 'Множитель шанса клюнуть для ОБЫЧНЫХ видов. 1.0 — как есть.'),
+              _num('rarityUncommon', 'Необычная, ×',
+                  info: 'Множитель шанса для необычных видов. Меньше — реже.'),
+              _num('rarityRare', 'Редкая, ×',
+                  info: 'Множитель шанса для редких видов. Меньше — реже.'),
+              _num('rarityTrophy', 'Трофейная, ×',
+                  info: 'Множитель шанса для трофейных видов. Меньше — реже.'),
+              _num('rarityLegendary', 'Легендарная, ×',
+                  info: 'Множитель шанса для легендарных видов. Обычно самый '
+                      'низкий — они попадаются реже всего.'),
+            ],
+            icon: Icons.phishing,
+            color: const Color(0xFF5AA9E6),
+            info: 'Глобальные множители к вероятности поклёвки. Влияют на всю '
+                'рыбалку поверх профилей видов.',
+          ),
           Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(14),
@@ -172,16 +215,16 @@ class _TuningEditorState extends State<TuningEditor> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Погода',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800)),
-                const SizedBox(height: 2),
-                Text('Сдвиг вероятности осадков в прогнозе (влево — реже, вправо — чаще)',
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        fontSize: 11.5)),
+                const AdminSectionHeader(
+                  icon: Icons.cloud,
+                  title: 'Погода',
+                  subtitle:
+                      'Сдвиг вероятности осадков в прогнозе (влево — реже, вправо — чаще)',
+                  color: Color(0xFFB98CFF),
+                  info: 'Двигает вероятность дождя/снега во всём прогнозе по '
+                      'водоёмам. Влево — суше, вправо — чаще осадки.',
+                ),
+                const SizedBox(height: 4),
                 Row(children: [
                   const Text('Реже', style: TextStyle(color: Colors.white38)),
                   Expanded(
@@ -213,7 +256,8 @@ class _TuningEditorState extends State<TuningEditor> {
     );
   }
 
-  Widget _section(String title, String sub, List<Widget> fields) {
+  Widget _section(String title, String sub, List<Widget> fields,
+      {required IconData icon, String info = '', Color color = _gold}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -225,15 +269,12 @@ class _TuningEditorState extends State<TuningEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800)),
-          const SizedBox(height: 2),
-          Text(sub,
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.45), fontSize: 11.5)),
+          AdminSectionHeader(
+              icon: icon,
+              title: title,
+              subtitle: sub,
+              info: info,
+              color: color),
           const SizedBox(height: 12),
           Wrap(spacing: 12, runSpacing: 12, children: fields),
         ],
@@ -241,8 +282,8 @@ class _TuningEditorState extends State<TuningEditor> {
     );
   }
 
-  Widget _num(String key, String label) => SizedBox(
-        width: 170,
+  Widget _num(String key, String label, {String info = ''}) => SizedBox(
+        width: 176,
         child: TextField(
           controller: _c[key],
           keyboardType: TextInputType.number,
@@ -251,6 +292,7 @@ class _TuningEditorState extends State<TuningEditor> {
             labelText: label,
             labelStyle:
                 TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+            suffixIcon: info.isEmpty ? null : InfoDot(info),
             filled: true,
             fillColor: Colors.black.withValues(alpha: 0.25),
             border: OutlineInputBorder(
