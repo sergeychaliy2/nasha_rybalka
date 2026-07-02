@@ -761,15 +761,21 @@ class GameWindow extends StatelessWidget {
                 padding: context.compact
                     ? const EdgeInsets.fromLTRB(8, 4, 8, 2)
                     : const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                child: Row(
-                  children: [
-                    _closeButton(context),
-                    const Spacer(),
-                    const StatusPill(),
-                    const Spacer(),
-                    _titlePill(),
-                  ],
-                ),
+                // На телефоне убираем стат-плашку из шапки окна — она не нужна
+                // в разделах и съедала место; остаётся только «×» и заголовок.
+                child: context.compact
+                    ? Row(children: [
+                        _closeButton(context),
+                        const Spacer(),
+                        _titlePill(),
+                      ])
+                    : Row(children: [
+                        _closeButton(context),
+                        const Spacer(),
+                        const StatusPill(),
+                        const Spacer(),
+                        _titlePill(),
+                      ]),
               ),
               Expanded(
                 child: Padding(

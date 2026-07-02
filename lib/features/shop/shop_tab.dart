@@ -71,7 +71,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
                 children: [
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 280),
-                    child: _categoryBanner(_category, items.length),
+                    child: _categoryBanner(_category, items.length, compact),
                   ),
                   Expanded(
                     child: GridView.builder(
@@ -160,14 +160,14 @@ class _ShopTabState extends ConsumerState<ShopTab> {
 
   /// Баннер категории: тематическое фото-полотно с названием и счётчиком
   /// поверх. Ключ по категории — AnimatedSwitcher плавно перелистывает баннеры.
-  Widget _categoryBanner(GearCategory c, int count) {
+  Widget _categoryBanner(GearCategory c, int count, bool compact) {
     return Padding(
       key: ValueKey(c),
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: compact ? 6 : 10),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          height: 78,
+          height: compact ? 44 : 78,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -196,24 +196,24 @@ class _ShopTabState extends ConsumerState<ShopTab> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Container(width: 4, height: 30, color: kGold),
+                    Container(width: 4, height: compact ? 22 : 30, color: kGold),
                     const SizedBox(width: 11),
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(_categoryLabel(c),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 19,
+                                fontSize: compact ? 14 : 19,
                                 fontWeight: FontWeight.w900,
-                                shadows: [
+                                shadows: const [
                                   Shadow(color: Colors.black, blurRadius: 8)
                                 ])),
                         Text('$count шт. в наличии',
                             style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.6),
-                                fontSize: 11.5)),
+                                fontSize: compact ? 10 : 11.5)),
                       ],
                     ),
                   ]),
