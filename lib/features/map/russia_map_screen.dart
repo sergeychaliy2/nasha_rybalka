@@ -14,6 +14,7 @@ import '../fishing/fishing_screen.dart';
 import '../gear/gear_tab.dart';
 import '../profile/profile_window.dart';
 import '../../shared/content_images.dart';
+import '../shell/responsive.dart';
 import '../shell/ui_kit.dart';
 import '../shop/shop_tab.dart';
 import '../skills/skills_screen.dart';
@@ -41,6 +42,7 @@ class _RussiaMapScreenState extends ConsumerState<RussiaMapScreen>
     with SingleTickerProviderStateMixin {
   // Свой контроллер зума/панорамы: screen = scene * _s + _o.
   double _s = 1;
+  double _maxZoom = 8.0; // на телефоне ниже — меньше нагрузка при приближении
   Offset _o = Offset.zero;
   Size _viewport = Size.zero;
   double _pinchStartScale = 1;
@@ -72,7 +74,7 @@ class _RussiaMapScreenState extends ConsumerState<RussiaMapScreen>
 
   /// Плавный зум к якорю (для кнопок): анимируем масштаб и смещение.
   void _animateZoom(double factor, Offset anchor) {
-    final next = (_s * factor).clamp(1.0, 8.0);
+    final next = (_s * factor).clamp(1.0, _maxZoom);
     if (next == _s) return;
     final k = next / _s;
     var o = anchor - (anchor - _o) * k;
@@ -164,7 +166,7 @@ class _RussiaMapScreenState extends ConsumerState<RussiaMapScreen>
   /// Масштабирование с сохранением точки [anchor] (экранные координаты)
   /// на месте: zoom-to-cursor.
   void _applyZoom(double factor, Offset anchor) {
-    final next = (_s * factor).clamp(1.0, 8.0);
+    final next = (_s * factor).clamp(1.0, _maxZoom);
     final k = next / _s;
     if (k == 1) return;
     _o = anchor - (anchor - _o) * k;
@@ -185,6 +187,7 @@ class _RussiaMapScreenState extends ConsumerState<RussiaMapScreen>
 
   @override
   Widget build(BuildContext context) {
+    _maxZoom = context.compact ? 5.0 : 8.0;
     final regionsAsync = ref.watch(russiaRegionsProvider);
     final locationsAsync = ref.watch(locationsProvider);
     final player = ref.watch(playerControllerProvider).value;
@@ -277,11 +280,21 @@ class _RussiaMapScreenState extends ConsumerState<RussiaMapScreen>
                                                     ? null
                                                     : r?.nameEn);
                                           },
-                                          child: CustomPaint(
-                                            painter: _RegionsPainter(
-                                              cache: cache,
-                                              hovered: _hovered,
-                                              selected: _selected,
+                                          // RepaintBoundary кэширует карту в
+                                          // текстуру: при зуме/панораме
+                                          // трансформ масштабирует готовый
+                                          // слой, а не перерисовывает все
+                                          // границы каждый кадр (без лагов на
+                                          // телефоне при сильном приближении).
+                                          child: RepaintBoundary(
+                                            child: CustomPaint(
+                                              isComplex: true,
+                                              willChange: false,
+                                              painter: _RegionsPainter(
+                                                cache: cache,
+                                                hovered: _hovered,
+                                                selected: _selected,
+                                              ),
                                             ),
                                           ),
                                         ),

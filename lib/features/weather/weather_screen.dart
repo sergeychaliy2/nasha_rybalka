@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/seed/content_state.dart';
 import '../map/region_store.dart';
 import '../map/russia_geo.dart';
+import '../shell/responsive.dart';
 import '../shell/ui_kit.dart';
 import 'weather_forecast.dart';
 
@@ -37,6 +38,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen>
 
   // Зум/панорама (как на основной карте).
   double _s = 1;
+  double _maxZoom = 8.0; // на телефоне ниже — меньше нагрузка при приближении
   Offset _o = Offset.zero;
   double _pinchStart = 1;
   Size _viewport = Size.zero;
@@ -99,7 +101,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen>
   // --- Зум/панорама -----------------------------------------------------------
 
   void _applyZoom(double factor, Offset anchor) {
-    final next = (_s * factor).clamp(1.0, 8.0);
+    final next = (_s * factor).clamp(1.0, _maxZoom);
     if (next == _s) return;
     final k = next / _s;
     _o = anchor - (anchor - _o) * k;
@@ -123,7 +125,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen>
 
   /// Плавный зум к якорю (для кнопок): анимируем масштаб и смещение.
   void _animateZoom(double factor, Offset anchor) {
-    final next = (_s * factor).clamp(1.0, 8.0);
+    final next = (_s * factor).clamp(1.0, _maxZoom);
     if (next == _s) return;
     final k = next / _s;
     var o = anchor - (anchor - _o) * k;
@@ -147,6 +149,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen>
 
   @override
   Widget build(BuildContext context) {
+    _maxZoom = context.compact ? 5.0 : 8.0;
     final regionsAsync = ref.watch(russiaRegionsProvider);
     return Scaffold(
       backgroundColor: const Color(0xFF0A1018),
@@ -207,9 +210,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen>
                                 width: size.width,
                                 height: size.height,
                                 child: Stack(fit: StackFit.expand, children: [
-                                  CustomPaint(
-                                    painter: _WxRegionPainter(_shapes, _layer,
-                                        _hourAhead, _daySeed, _cells),
+                                  // Кэш статичного слоя регионов в текстуру —
+                                  // зум/панорама не перерисовывают границы.
+                                  RepaintBoundary(
+                                    child: CustomPaint(
+                                      isComplex: true,
+                                      willChange: false,
+                                      painter: _WxRegionPainter(_shapes, _layer,
+                                          _hourAhead, _daySeed, _cells),
+                                    ),
                                   ),
                                   if (_layer == WxLayer.precip ||
                                       _layer == WxLayer.snow)
