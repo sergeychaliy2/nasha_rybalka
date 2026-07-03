@@ -6,8 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nasha_rybalka/app/providers.dart';
 import 'package:nasha_rybalka/features/menu/main_menu_screen.dart';
 import 'package:nasha_rybalka/main.dart';
+import 'package:nasha_rybalka/shared/sound_service.dart';
 
 void main() {
+  // В виджет-тестах не проигрываем музыку: иначе fade-таймер (Timer.periodic),
+  // запускаемый в dispose() меню, остаётся «pending» после разбора дерева и
+  // роняет тест. При выключенной музыке stopMenuMusic идёт по ветке без таймера.
+  setUp(() {
+    SoundService.musicEnabled = false;
+  });
+
   testWidgets('Сплэш показывает логотип и загрузку',
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -19,7 +27,7 @@ void main() {
     ));
     await tester.pump(const Duration(milliseconds: 80));
 
-    expect(find.text('НАША РЫБАЛКА'), findsOneWidget);
+    expect(find.text('ЗАВЕТНАЯ РЫБАЛКА'), findsOneWidget);
     expect(find.textContaining('Загрузка'), findsOneWidget);
   });
 

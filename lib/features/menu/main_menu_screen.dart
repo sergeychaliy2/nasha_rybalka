@@ -648,7 +648,7 @@ class _AboutBody extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Наша Рыбалка', style: displayStyle(size: 22)),
+              Text('Заветная Рыбалка', style: displayStyle(size: 22)),
               const SizedBox(height: 10),
               const Text(
                 'Офлайн-симулятор рыбалки от первого лица. Реальная карта '

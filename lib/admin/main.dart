@@ -5,7 +5,7 @@ import '../data/account_store.dart';
 import '../data/content_overrides.dart';
 import 'admin_app.dart';
 
-/// Точка входа админки «Наша Рыбалка».
+/// Точка входа админки «Заветная Рыбалка».
 /// Запуск: flutter run -t lib/admin/main.dart -d windows
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

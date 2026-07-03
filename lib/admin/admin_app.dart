@@ -30,7 +30,7 @@ class AdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Наша Рыбалка — Админка',
+      title: 'Заветная Рыбалка — Админка',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -198,7 +198,7 @@ class _AdminHomeState extends State<AdminHome> {
                 children: [
                   const Icon(Icons.admin_panel_settings, color: _gold, size: 30),
                   const SizedBox(width: 12),
-                  Text('Админка · Наша Рыбалка',
+                  Text('Админка · Заветная Рыбалка',
                       style: _title(24)),
                   const Spacer(),
                   OutlinedButton.icon(

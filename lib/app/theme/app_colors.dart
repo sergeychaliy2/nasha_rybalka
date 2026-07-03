@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Палитра «Наша Рыбалка»: графит/сталь + тёплый янтарь как акцент клёва/награды.
+/// Палитра «Заветная Рыбалка»: графит/сталь + тёплый янтарь как акцент клёва/награды.
 abstract final class AppColors {
   static const background = Color(0xFF0B0E12);
   static const surface = Color(0xFF12161B);

@@ -30,7 +30,7 @@ class RenderCompareHome extends StatelessWidget {
                   const Icon(Icons.phishing,
                       size: 56, color: AppColors.accent),
                   const SizedBox(height: 12),
-                  const Text('Наша Рыбалка',
+                  const Text('Заветная Рыбалка',
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 30,

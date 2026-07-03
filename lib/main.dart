@@ -38,7 +38,7 @@ Future<void> main() async {
   );
 }
 
-/// «Наша Рыбалка» — локальная сборка.
+/// «Заветная Рыбалка» — локальная сборка.
 ///
 /// Поток: сплэш → рисованное главное меню → карта России по регионам
 /// (реальные границы) → водоём → сцена ловли. Разделы (магазин, снаряжение,
@@ -49,7 +49,7 @@ class NashaRybalkaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Наша Рыбалка',
+      title: 'Заветная Рыбалка',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
       // Ограничиваем системный масштаб шрифта, чтобы крупный шрифт устройства

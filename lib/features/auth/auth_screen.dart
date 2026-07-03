@@ -83,7 +83,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🎣  Наша Рыбалка',
+                      const Text('🎣  Заветная Рыбалка',
                           style: TextStyle(
                               color: kGold,
                               fontSize: 20,

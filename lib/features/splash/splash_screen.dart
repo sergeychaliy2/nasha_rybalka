@@ -103,7 +103,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Transform.scale(
                       scale: 0.92 + 0.08 * eased,
                       child: Column(children: [
-                        Text('НАША РЫБАЛКА',
+                        Text('ЗАВЕТНАЯ РЫБАЛКА',
                             style: TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.w900,
