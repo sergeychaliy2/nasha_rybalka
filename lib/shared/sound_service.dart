@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -128,25 +130,61 @@ class SoundService {
   static void sonarBeep() => play(Sfx.sonar);
   static void rainStart() => play(Sfx.rain);
 
-  // --- Музыка меню --------------------------------------------------------------
+  // --- Фоновая музыка (меню + все разделы, кроме сцены ловли) -----------------
 
+  static Timer? _fade;
+
+  static void _cancelFade() {
+    _fade?.cancel();
+    _fade = null;
+  }
+
+  /// Плавно свести громкость музыки от [from] к [to] (~500 мс) — мягкое
+  /// появление/затухание при переходах между экранами.
+  static void _fadeVolume(double from, double to, {void Function()? onDone}) {
+    _cancelFade();
+    const steps = 15;
+    _music.setVolume(from.clamp(0.0, 1.0));
+    var i = 0;
+    _fade = Timer.periodic(const Duration(milliseconds: 34), (t) {
+      i++;
+      final v = (from + (to - from) * (i / steps)).clamp(0.0, 1.0);
+      _music.setVolume(v);
+      if (i >= steps) {
+        t.cancel();
+        _fade = null;
+        onDone?.call();
+      }
+    });
+  }
+
+  /// Запустить/возобновить фоновую музыку (плавное появление). Вызывается на
+  /// меню, карте и в разделах — музыка звучит везде, кроме сцены ловли.
   static void startMenuMusic() {
     if (!musicEnabled || musicVolume <= 0) return;
     if (_musicPlaying) {
+      _cancelFade();
       _music.setVolume(musicVolume);
       return;
     }
     _musicPlaying = true;
     _music
-        .play(audioSource(musicKey, musicFile), volume: musicVolume)
+        .play(audioSource(musicKey, musicFile), volume: 0)
+        .then((_) => _fadeVolume(0, musicVolume))
         .catchError((_) {
       _musicPlaying = false;
     });
   }
 
+  /// Плавно заглушить музыку (напр. при входе в сцену ловли).
   static void stopMenuMusic() {
+    if (!_musicPlaying) {
+      _cancelFade();
+      _music.stop().catchError((_) {});
+      return;
+    }
     _musicPlaying = false;
-    _music.stop().catchError((_) {});
+    _fadeVolume(musicVolume, 0, onDone: () => _music.stop().catchError((_) {}));
   }
 
   static void setMusicEnabled(SharedPreferences prefs, bool v) {
@@ -162,7 +200,10 @@ class SoundService {
   static void setMusicVolume(SharedPreferences prefs, double v) {
     musicVolume = v.clamp(0.0, 1.0);
     prefs.setDouble('settings.musicVolume', musicVolume);
-    if (_musicPlaying) _music.setVolume(musicVolume);
+    if (_musicPlaying) {
+      _cancelFade();
+      _music.setVolume(musicVolume);
+    }
   }
 
   /// Разовое прослушивание файла (для проверки в админке/настройках).

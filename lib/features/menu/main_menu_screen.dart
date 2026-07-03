@@ -130,12 +130,10 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                     0,
                     _MenuItem(
                       label: 'НАЧАТЬ ИГРУ',
-                      onTap: () async {
-                        SoundService.stopMenuMusic(); // тишина на карте/воде
-                        await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const RussiaMapScreen()));
-                        if (mounted) SoundService.startMenuMusic();
-                      },
+                      // Музыка продолжает играть на карте и в разделах —
+                      // затихает только на сцене ловли (см. fishing_screen).
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const RussiaMapScreen())),
                     ),
                   ),
                   const SizedBox(height: 26),

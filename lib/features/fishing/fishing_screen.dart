@@ -163,12 +163,16 @@ class _FishingScreenState extends ConsumerState<FishingScreen>
     super.initState();
     _biteCalc = ref.read(biteCalculatorProvider);
     _ticker = createTicker(_onTick);
+    // На воде — тишина: фоновая музыка плавно затухает (эффекты остаются).
+    SoundService.stopMenuMusic();
     _init();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    // Возврат к карте/меню — музыка плавно возвращается.
+    SoundService.startMenuMusic();
     super.dispose();
   }
 
